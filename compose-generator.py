@@ -1,54 +1,67 @@
 import os
+from typing import Any
 import yaml, sys
 
-# receives the number of clients and the output file.
-# creates a new file (or replaces an existing file) with
-# <output_file> as name. This yaml file will create a 
-# compose file with <client_number> clientes.
+def add_server(compose: dict[str, Any]):
+    compose['services']['server']= {
+        'container_name': 'server',
+        'image': 'server:latest',
+        'entrypoint': 'python3 /main.py',
+        'environment': [
+            'PYTHONUNBUFFERED=1',
+            'LOGGING_LEVEL=DEBUG'
+        ],
+        'networks': ['testing_net']
+    }
+    return compose
+
+def add_client(compose: dict[str, Any]):
+    compose['services']['client1']= {
+        'container_name': 'client1',
+        'image': 'client:latest',
+        'entrypoint': '/client',
+        'environment': [
+            'CLI_ID=1',
+            'CLI_LOG_LEVEL=DEBUG'
+        ],
+        'networks': ['testing_net'],
+        'depends_on': ['server']
+    }
+    return compose
+
+def add_testing_network(compose: dict[str, Any]):
+    compose['networks']['testing_net'] = {
+        'ipam': {
+            'driver': 'default',
+            'config': [
+                {'subnet': '172.25.125.0/24'}
+            ]
+        }
+    }
+    return compose
+"""
+receives the number of clients and the output file.
+creates a new file (or replaces an existing file) with
+<output_file> as name. This yaml file will create a 
+compose file with <client_number> clientes.
+"""
 def generate_compose(output_file: str, client_number: int):
     compose = {
         'name': 'tp0',
         'services': {
-            'server': {
-                'container_name': 'server',
-                'image': 'server:latest',
-                'entrypoint': 'python3 /main.py',
-                'environment': [
-                    'PYTHONUNBUFFERED=1',
-                    'LOGGING_LEVEL=DEBUG'
-                ],
-                'networks': ['testing_net']
-            },
-            'client1': {
-                'container_name': 'client1',
-                'image': 'client:latest',
-                'entrypoint': '/client',
-                'environment': [
-                    'CLI_ID=1',
-                    'CLI_LOG_LEVEL=DEBUG'
-                ],
-                'networks': ['testing_net'],
-                'depends_on': ['server']
-            }
         },
         'networks': {
-            'testing_net': {
-                'ipam': {
-                    'driver': 'default',
-                    'config': [
-                        {'subnet': '172.25.125.0/24'}
-                    ]
-                }
-            }
         }
     }
 
+    compose = add_server(compose)
+    compose = add_client(compose)
+    compose = add_testing_network(compose)
+
     with open(output_file, 'w') as file:
-        yaml.dump(compose, file,sort_keys=False, default_flow_style=False, indent=2)
+        yaml.dump(compose, file,sort_keys=False, default_flow_style=False)
     # to-do:
     #  * use the client_num to create more than one client
-    print(output_file)
-    print(client_number)
 
 def main():
     if len(sys.argv) != 3:
