@@ -35,3 +35,5 @@ donde se espera, por ejemplo para el servidor, el output:
 [{"Type":"bind","Source":"$(CWD)/server/config.ini","Destination":"/config.ini","Mode":"rw","RW":true,"Propagation":"rprivate"}]
 ```
 siendo CWD el directorio en donde se encuentra el archivo compose.
+
+Para ejecutar el EchoServer siga los mismos pasos que para el **ej1**.
