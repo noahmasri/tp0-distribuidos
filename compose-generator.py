@@ -11,7 +11,8 @@ def add_server(compose: dict[str, Any]):
             'PYTHONUNBUFFERED=1',
             'LOGGING_LEVEL=DEBUG'
         ],
-        'networks': ['testing_net']
+        'networks': ['testing_net'],
+        'volumes': ['./server/config.ini:/config.ini']
     }
     return compose
 
@@ -25,7 +26,8 @@ def add_client(compose: dict[str, Any], client_id: int):
             'CLI_LOG_LEVEL=DEBUG'
         ],
         'networks': ['testing_net'],
-        'depends_on': ['server']
+        'depends_on': ['server'],
+        'volumes': ['./client/config.yaml:/config.yaml']
     }
     return compose
 
