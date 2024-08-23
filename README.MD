@@ -21,3 +21,17 @@ Los targets disponibles son:
 * **docker-compose-logs**: Permite ver los logs actuales del proyecto. Acompañar con `grep` para lograr ver mensajes de una aplicación específica dentro del compose.
 * **docker-image**: Buildea las imágenes a ser utilizadas tanto en el servidor como en el cliente. Este target es utilizado por **docker-compose-up**, por lo cual se lo puede utilizar para testear nuevos cambios en las imágenes antes de arrancar el proyecto.
 * **build**: Compila la aplicación cliente para ejecución en el _host_ en lugar de en docker. La compilación de esta forma es mucho más rápida pero requiere tener el entorno de Golang instalado en la máquina _host_.
+
+## Ejercicio 2
+Se genera el ejercicio 2 a partir de lo realizado para el ejercicio 1. En esta rama se encuentran modificados tanto los dos compose que se encontraban de antes, como el generator para agregar un volume a cada contenedor que mapee de su archivo de configuración externo (ubicado en el sistema de archivos del host) al interior del contenedor.
+
+Para verificar que el archivo de configuración se encuentre correctamente montado se puede usar el comando:
+
+```bash
+docker inspect <nombre_del_contenedor> --format='{{json .Mounts}}'
+```
+donde se espera, por ejemplo para el servidor, el output:
+```bash
+[{"Type":"bind","Source":"$(CWD)/server/config.ini","Destination":"/config.ini","Mode":"rw","RW":true,"Propagation":"rprivate"}]
+```
+siendo CWD el directorio en donde se encuentra el archivo compose.
