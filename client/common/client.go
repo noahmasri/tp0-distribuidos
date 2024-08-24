@@ -50,8 +50,26 @@ func (c *Client) createClientSocket() error {
 	return nil
 }
 
+func (c *Client) ShutdownGracefully() {
+	log.Infof("action: shutdown_gracefully | result: in_progress | client_id: %v | msg: received SIGTERM signal",
+			c.config.ID,
+		)
+
+	if c.conn != nil {
+        c.conn.Close()
+		log.Infof("action: close_connection | result: success | client_id: %v",
+			c.config.ID,
+		)
+    }
+
+	log.Infof("action: shutdown_gracefully | result: success | client_id: %v",
+		c.config.ID,
+	)
+}
+
 // StartClientLoop Send messages to the client until some time threshold is met
-func (c *Client) StartClientLoop() {
+func (c *Client) StartClientLoop(done chan bool) {
+
 	// There is an autoincremental msgID to identify every message sent
 	// Messages if the message amount threshold has not been surpassed
 	for msgID := 1; msgID <= c.config.LoopAmount; msgID++ {
@@ -67,12 +85,14 @@ func (c *Client) StartClientLoop() {
 		)
 		msg, err := bufio.NewReader(c.conn).ReadString('\n')
 		c.conn.Close()
+		c.conn = nil
 
 		if err != nil {
 			log.Errorf("action: receive_message | result: fail | client_id: %v | error: %v",
 				c.config.ID,
 				err,
 			)
+			done <- true
 			return
 		}
 
@@ -86,4 +106,5 @@ func (c *Client) StartClientLoop() {
 
 	}
 	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
+	done <- true
 }

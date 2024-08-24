@@ -72,9 +72,37 @@ Una vez hecho esto correr:
 En caso de recibir el error `bash: ./validar-echo-server.sh: Permission denied`, corra `chmod +x validar-echo-server.sh` para otorgar permisos de ejecución al script, y luego vuelva a ejecutar el comando anterior.
 Si todo se encuentra corriendo y se recibe por parte del servidor el mismo mensaje que se le envió, se espera que el output sea `action: test_echo_server | result: success`.
 
+## Ejercicio 4
+Para este ejercicio se pidió que ambos el servidor y el cliente, al recibir una señal SIGTERM realicen un graceful shutdown. Para llevar a cabo esto en el servidor, se agregó a este un signal handler, que funciona mediante eventos. Si el servidor recibe la señal, automáticamente va a comenzar a ejecutarse la función establecida como handler, en este caso el método `__shutdown_gracefully`. Esta función lo que hace es settear el atributo `should_stop` en true, y cerrar el socket para no aceptar más conexiones. Al regresar a donde estaba, probablemente reciba un error intentando acceder al socket, por lo que este atributo sirve para ignorar el error que podría darse, ya que no es un error del SO sino que fue cerrado apropósito.
+Por otro lado, la forma de manejar el shutdown desde el cliente es levemente distinta, debido a como maneja go las excepciones. Para manejar las excepciones en este, se debe escuchar mediante un channel, que en mi caso se llama sigchan. Además de esto, se agregó un channel para comunicar el hilo principal con la subrutina que ejecuta el bucle del cliente, mediante el cual el cliente envía un booleano por el canal para avisar que terminó cuando termina el loop, o cuando ocurre un error en la lectura del socket. La función main tiene dos formas de terminar: si recibe un done, donde simplemente retorna, o si recibe la señal por el sigchan, donde ejecuta la función `ShutdownGracefully()`.
+
+### Como ejecutarlo
+Para verificar el correcto manejo de las señales, se debe correr:
+```bash
+make docker-compose-up
+```
+para iniciar los contenedores, y luego ejecutar:
+```bash
+make docker-compose-stop
+```
+para enviar la señal a los contenedores sin eliminarlos. Una vez hecho esto, se pueden observar los logs corriendo:
+```bash
+make docker-compose-logs
+```
+para ver las distintas acciones que ejecuta cada proceso al recibir SIGTERM. 
+
+En caso de querer ver la ejecución llegar a su fin, saltear el segundo paso y acceder a los logs. Una vez visto lo deseado en los logs, puede salir de estos con ctrl+c, y cortar la ejecución de los contenedores con:
+```bash
+make docker-compose-down
+```
+
 # Referencias
 [Instalar netcat en contenedor](https://stackoverflow.com/questions/52570028/i-am-unable-to-execute-netcat-command-within-docker-bash-terminal)
 
 [Solucionar problema: 'netcat' has no installation candidate](https://forums.docker.com/t/package-netcat-has-no-installation-candidate-how-to-fix-this/136541)
 
 [Correr comandos de terminal en docker container](https://www.warp.dev/terminus/docker-run-bash)
+
+[Librería para el manejo de señales en go](https://go.dev/pkg/os/signal/?m=old)
+
+[Ejemplos de manejo de señales en go](https://gobyexample.com/signals)

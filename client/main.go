@@ -5,7 +5,8 @@ import (
 	"os"
 	"strings"
 	"time"
-
+	"os/signal"
+	"syscall"
 	"github.com/op/go-logging"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
@@ -110,6 +111,19 @@ func main() {
 		LoopPeriod:    v.GetDuration("loop.period"),
 	}
 
+	sigchan := make(chan os.Signal, 1)
+	signal.Notify(sigchan, syscall.SIGTERM)
+
+	// for client loop subroutine to let main know it is done
+	done := make(chan bool, 1)
+
 	client := common.NewClient(clientConfig)
-	client.StartClientLoop()
+	go client.StartClientLoop(done)
+	
+	select {
+		case <-sigchan:
+			client.ShutdownGracefully()
+		case <-done:
+			return
+	}
 }

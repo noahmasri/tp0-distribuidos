@@ -12,9 +12,10 @@ class Server:
         self._server_socket.listen(listen_backlog)
 
     def __shutdown_gracefully(self, signum, frame):
-        print("execute shutdown actions")
+        logging.info(f'action: shutdown_gracefully | result: in_progress | msg: received SIGTERM signal')
         self._should_stop = True
         self._server_socket.close()
+        logging.info(f'action: close_socket | result: success | msg: received SIGTERM signal')
 
     def run(self):
         """
@@ -32,11 +33,14 @@ class Server:
             try:
                 client_sock = self.__accept_new_connection()
                 self.__handle_client_connection(client_sock)
-            except OSError:
+            except OSError as e:
                 if self._should_stop:
-                    # ignore error if it was generated because of our own socket closing
-                    break
-                print("socket err")
+                    # ignore error if socket was closed manually
+                    logging.info(f'action: shutdown_gracefully | result: success')
+                else:
+                    # server exits if there was a problem with the socket
+                    logging.info(f'action: error_exiting | result: in_progress | error: {e}')
+                break        
 
     def __handle_client_connection(self, client_sock):
         """
