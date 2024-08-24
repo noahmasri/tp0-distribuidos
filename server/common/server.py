@@ -1,3 +1,4 @@
+import signal
 import socket
 import logging
 
@@ -9,6 +10,10 @@ class Server:
         self._server_socket.bind(('', port))
         self._server_socket.listen(listen_backlog)
 
+    def __shutdown_gracefully(self):
+        print("execute shutdown actions")
+        self._server_socket.close()
+
     def run(self):
         """
         Dummy Server loop
@@ -17,12 +22,17 @@ class Server:
         communication with a client. After client with communucation
         finishes, servers starts to accept new connections again
         """
-
         # TODO: Modify this program to handle signal to graceful shutdown
         # the server
+        signal.signal(signal.SIGTERM, self.__shutdown_gracefully)
+
         while True:
-            client_sock = self.__accept_new_connection()
-            self.__handle_client_connection(client_sock)
+            try:
+                client_sock = self.__accept_new_connection()
+                self.__handle_client_connection(client_sock)
+            except OSError:
+                print("socket err")
+
 
     def __handle_client_connection(self, client_sock):
         """

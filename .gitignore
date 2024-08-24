@@ -1,3 +1,6 @@
+# cache
+server/common/__pycache__
+
 # Mac
 **.DS_Store
 

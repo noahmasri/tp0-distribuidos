@@ -1,0 +1,2 @@
+# Explicación del directorio
+Un pequeño cliente para correr por terminal, en conjunto con el servidor. La idea de este es enviar mediante la consola la señal `SIGTERM` al servidor, haciendo uso del comando `kill -SIGTERM <server pid>` y probar el correcto funcionamiento del servidor ante esta.
