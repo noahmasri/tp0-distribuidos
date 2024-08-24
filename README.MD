@@ -37,3 +37,37 @@ donde se espera, por ejemplo para el servidor, el output:
 siendo CWD el directorio en donde se encuentra el archivo compose.
 
 Para ejecutar el EchoServer siga los mismos pasos que para el **ej1**.
+
+## Ejercicio 3
+Para llevar a cabo lo pedido, se creó un script que crea un contenedor que envía un mensaje al servidor ("Hello echoer!") y se conecta a este mediante la red de docker para no deber exponer el puerto del servidor por fuera de la red de contenedores. Este contenedor creado es temporal, es decir, luego de terminar su ejecución es eliminado, y se conecta a la red que define el archivo `docker-compose-dev.yaml`, tp0_testing_net.
+
+Este script se basa principalmente en esta porción de código, que es la que se encarga de enviar el mensaje al servidor, y de obtener su respuesta. Esto lo que hace es guardarse en una variable response únicamente el resultado de la ejecución del comando `netcat`, deshaciendose tanto de la salida de stdout como la de stderr de todos los comandos. Lo primero que hace es instalar `netcat`, para lo cual había 2 versiones, traditional y openbsd, por lo que se debió elegir una. Luego hace echo del mensaje a enviar, enviando esto al servidor en el puerto en que este se encuentra, estableciendo arbitrariamente un timeout de 1 segundo.
+
+```bash
+RESPONSE=$(docker run --rm --network tp0_testing_net --name netcat ubuntu:18.04 bash -c "
+    apt-get update > /dev/null 2>&1 && \
+    apt-get install -y netcat-traditional > /dev/null 2>&1 && \ 
+    echo \"$TEST_MESSAGE\" | nc -w 1 "server" $PORT
+" 2>&1)
+```
+En la variable response entonces se guarda únicamente la respuesta del servidor. Se redirige a la salida estándar la salida de error para posible debugging. De querer saber por qué está fallando, se puede hacer echo del mensaje de response.
+
+### Como ejecutarlo
+Para que esto funcione, se debe tener la red corriendo, y para esto debemos correr el comando:
+```bash
+make docker-compose-up
+```
+En caso de que esta no esté corriendo, se recibirá el output `action: test_echo_server | result: fail`.
+Una vez hecho esto correr:
+```bash
+./validar-echo-server.sh
+```
+En caso de recibir el error `bash: ./validar-echo-server.sh: Permission denied`, corra `chmod +x validar-echo-server.sh` para otorgar permisos de ejecución al script, y luego vuelva a ejecutar el comando anterior.
+Si todo se encuentra corriendo y se recibe por parte del servidor el mismo mensaje que se le envió, se espera que el output sea `action: test_echo_server | result: success`.
+
+# Referencias
+[Instalar netcat en contenedor](https://stackoverflow.com/questions/52570028/i-am-unable-to-execute-netcat-command-within-docker-bash-terminal)
+
+[Solucionar problema: 'netcat' has no installation candidate](https://forums.docker.com/t/package-netcat-has-no-installation-candidate-how-to-fix-this/136541)
+
+[Correr comandos de terminal en docker container](https://www.warp.dev/terminus/docker-run-bash)
