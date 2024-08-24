@@ -1,9 +1,16 @@
 # Parte 1
 
 ## Ejercicio 1
-En el archivo `docker-compose-dev.yaml` se encuentra el archivo compose original, con el cual se realizaron pruebas para ver si la estructura que iba a desarrollar era la apropiada. Luego, en el archivo `docker-compose-test.yaml` se encuentra un archivo generado con el script de bash. Si bien la estructura de estos difiere levemente por problemas de indentación con la librería usada, su ejecución funciona como fue pedido.
+En el archivo `docker-compose-dev.yaml` se encuentra el archivo compose original, con el cual se realizaron pruebas para ver si la estructura que iba a desarrollar era la apropiada. Luego, en el archivo `docker-compose-test.yaml` se encuentra un archivo generado con el script de bash. Si bien la estructura de estos difiere levemente por problemas de indentación con la librería usada, su ejecución funciona como fue pedido. 
+
+Se eligió usar la librería `pyyaml` en lugar de usar strings con el formato hecho a mano ya que considero que es mucho más seguro ante errores humanos. El uso de diccionarios para establecer las estructuras que luego mediante la propia librería se genera la indentación, hace que el código sea mucho mas legible y por tanto, menos propenso a errores.
 
 ### Como ejecutarlo
+Antes de ejecutar el script, deberán asegurarse de contar con la dependencia requerida, en este caso, pyyaml. Para esto, se debe ejecutar el comando:
+```bash
+pip install PyYAML
+```
+
 Para generar el compose, debe correr el comando:
 ```bash
 ./generar-compose.sh <nombre archivo output> <numero de clientes>
