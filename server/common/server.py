@@ -6,12 +6,14 @@ import logging
 class Server:
     def __init__(self, port, listen_backlog):
         # Initialize server socket
+        self._should_stop = False
         self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._server_socket.bind(('', port))
         self._server_socket.listen(listen_backlog)
 
-    def __shutdown_gracefully(self):
+    def __shutdown_gracefully(self, signum, frame):
         print("execute shutdown actions")
+        self._should_stop = True
         self._server_socket.close()
 
     def run(self):
@@ -26,13 +28,15 @@ class Server:
         # the server
         signal.signal(signal.SIGTERM, self.__shutdown_gracefully)
 
-        while True:
+        while not self._should_stop:
             try:
                 client_sock = self.__accept_new_connection()
                 self.__handle_client_connection(client_sock)
             except OSError:
+                if self._should_stop:
+                    # ignore error if it was generated because of our own socket closing
+                    break
                 print("socket err")
-
 
     def __handle_client_connection(self, client_sock):
         """
