@@ -96,6 +96,20 @@ En caso de querer ver la ejecución llegar a su fin, saltear el segundo paso y a
 make docker-compose-down
 ```
 
+## Ejercicio 5
+Para este ejercicio se pidió crear un protocolo de comunicación que permita que se emule una agencia de lotería, enviando por cliente una única apuesta. Este protocolo debe contener información suficiente para que se puedan evitar los short writes y los short reads.
+Antes de desarrollar el protocolo en sí, se realizó un pequeño análisis de los datos otorgados por la cátedra, donde se encontró que:
+* La máxima longitud de un nombre es de 23 caracteres en todos los csvs, mientras que la mínima se encuentra en la agencia 2, y es de 6 caracteres. Además, que una porción muy poco significativa de entradas tienen un apellido con ese máximo (menos de un 0,2%)
+* La máxima longitud de un apellido es de 10 caracteres, mientras que la mínima se encuentra en las agencias 1 y 3 y es de 6 caracteres. Además, que una porción pequeña de entradas tienen un apellido con ese máximo (menos de un 2%)
+
+Y además, se corroboró que:
+* Todos los documentos tienen 8 caracteres. Por como están estructurados, sabemos que el máximo valor que podrían tomar es 99.999.999 (aunque en los datasets sea 40000000 aprox), valor el cual, eliminando los '.', entra en un u32.
+* Las fechas tienen formato "YYYY-MM-DD"
+* Las apuestas son todas de 4 digitos, numéricas, y con un valor máximo de 9999
+
+Teniendo en cuenta todas estas validaciones sobre los datos es que se desarrolló un protocolo que pretende maximizar el throughput, disminuyendo la cantidad de bytes utilizados por apuesta.
+
+
 # Referencias
 [Instalar netcat en contenedor](https://stackoverflow.com/questions/52570028/i-am-unable-to-execute-netcat-command-within-docker-bash-terminal)
 

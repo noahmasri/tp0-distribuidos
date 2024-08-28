@@ -19,6 +19,11 @@ services:
     environment:
       - CLI_ID=1
       - CLI_LOG_LEVEL=DEBUG
+      - NOMBRE=Noah
+      - APELLIDO=Masri
+      - DOCUMENTO=43724680
+      - NACIMIENTO=2001-12-19
+      - NUMERO=2267
     networks:
       - testing_net
     depends_on:
@@ -33,6 +38,11 @@ services:
     environment:
       - CLI_ID=2
       - CLI_LOG_LEVEL=DEBUG
+      - NOMBRE=Franco
+      - APELLIDO=Villanustre
+      - DOCUMENTO=43442480
+      - NACIMIENTO=2001-07-12
+      - NUMERO=7574
     networks:
       - testing_net
     depends_on:
