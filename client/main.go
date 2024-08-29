@@ -10,7 +10,6 @@ import (
 	"github.com/op/go-logging"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
-
 	"github.com/7574-sistemas-distribuidos/docker-compose-init/client/common"
 )
 
@@ -118,6 +117,17 @@ func main() {
 	done := make(chan bool, 1)
 
 	client := common.NewClient(clientConfig)
+
+	bet := common.Bet{
+		Name:    "Noah",
+		Surname: "Masri",
+		ID:      43724680,
+		Date:    "2024-08-29",
+		Number:  4206,
+	}
+	res:=bet.EncodeToBytes()
+	fmt.Println(res)
+	
 	go client.StartClientLoop(done)
 	
 	select {

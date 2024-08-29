@@ -107,7 +107,16 @@ Y además, se corroboró que:
 * Las fechas tienen formato "YYYY-MM-DD"
 * Las apuestas son todas de 4 digitos, numéricas, y con un valor máximo de 9999
 
-Teniendo en cuenta todas estas validaciones sobre los datos es que se desarrolló un protocolo que pretende maximizar el throughput, disminuyendo la cantidad de bytes utilizados por apuesta.
+Teniendo en cuenta todas estas validaciones sobre los datos es que se desarrolló un protocolo que pretende maximizar la cantidad de apuestas que se pueden realizar por paquete o por segundo, disminuyendo la cantidad de bytes utilizados por cada una de estas. El protocolo entonces plantea que en un mensaje viajará en el siguiente orden la siguiente información:
+
+* Longitud del nombre: para esto, dado que el máximo es 23 caracteres, se asigna 1 byte, u8, que será suficiente para alojar el tamaño. Se permite que puedan aparecer nombres más largos, siempre y cuando no superen los 255 caracteres
+* Nombre: cantidad de bytes que se corresponden con la longitud. En base al byte anterior, se sabrá cuántos se deberá leer para obtener el nombre entero. 
+* Longitud del apellido: para esto, dado que el máximo es 10 caracteres, se asigna 1 byte. Se permite que puedan aparecer nombres más largos, siempre y cuando no superen los 255 caracteres.
+* Apellido: cantidad de bytes que se corresponden con la longitud.
+* Documento: campo de longitud fija de 4 bytes, un u32, que permite alojar números que llegan hasta 4294967295, por lo que 100 millones entran en este tipo de números.
+* Fecha: campo de longitud fija de 10 bytes. Se incluyen los '-', ya que es práctico almacenarlos así, y se considera que se podría tardar más parseando y desparseando este campo.
+* Numero de apuesta: campo de longitud fija de 2 bytes, un u16, que permite alojar números que llegan hasta 65536, por lo que cualquier numero hasta el 9999 entran en este tipo de números.
+
 
 
 # Referencias
