@@ -8,6 +8,13 @@ STORAGE_FILEPATH = "./bets.csv"
 """ Simulated winner number in the lottery contest. """
 LOTTERY_WINNER_NUMBER = 7574
 
+"""lengths in bytes"""
+AGENCY_LEN = 1
+NAME_LEN = 1 # bytes for name lenght
+SURNAME_LEN = 1 # bytes for name lenght
+ID_LEN = 4
+BIRTHDATE_LEN=10
+NUMBER_LEN = 2
 
 """ A lottery bet registry. """
 class Bet:
@@ -23,6 +30,38 @@ class Bet:
         self.document = document
         self.birthdate = datetime.date.fromisoformat(birthdate)
         self.number = int(number)
+
+    @staticmethod
+    def deserialize(data: bytes) -> 'Bet':
+        curr = 0
+
+        agency = int.from_bytes([data[curr]], 'little')
+        curr+=AGENCY_LEN
+
+        name_len = int.from_bytes([data[curr]], 'little')
+        curr+=NAME_LEN
+        name = data[curr:name_len+curr].decode()
+        curr+=name_len
+
+        surname_len = int.from_bytes([data[curr]], 'little')
+        curr+=SURNAME_LEN
+        surname = data[curr:surname_len+curr].decode()
+        curr+=surname_len
+
+        document=int.from_bytes(data[curr:ID_LEN+curr], 'little')
+        curr+=ID_LEN
+
+        birthdate=data[curr:BIRTHDATE_LEN+curr].decode()
+        curr+=BIRTHDATE_LEN
+
+        number = int.from_bytes(data[curr:curr+NUMBER_LEN], 'little')
+
+        return Bet(agency, name, surname, document, birthdate, number)
+    
+    def __repr__(self):
+        return (f"Bet(agency={self.agency}, first name={self.first_name}, last name={self.last_name}, "
+                f"document={self.document}, birthdate={self.birthdate}, number={self.number})")
+
 
 """ Checks whether a bet won the prize or not. """
 def has_won(bet: Bet) -> bool:

@@ -117,16 +117,6 @@ func main() {
 	done := make(chan bool, 1)
 
 	client := common.NewClient(clientConfig)
-
-	bet := common.Bet{
-		Name:    "Noah",
-		Surname: "Masri",
-		ID:      43724680,
-		Date:    "2024-08-29",
-		Number:  4206,
-	}
-	res:=bet.EncodeToBytes()
-	fmt.Println(res)
 	
 	go client.StartClientLoop(done)
 	
