@@ -2,7 +2,6 @@
 
 from configparser import ConfigParser
 from common.server import Server
-from common.utils import Bet
 import logging
 import os
 
@@ -72,6 +71,4 @@ def initialize_log(logging_level):
 
 
 if __name__ == "__main__":
-    bet = Bet.deserialize(bytes([2, 4, 78, 111, 97, 104, 5, 77, 97, 115, 114, 105, 136, 47, 155, 2, 50, 48, 50, 52, 45, 48, 56, 45, 50, 57, 110, 16]))
-    print(bet)
     main()

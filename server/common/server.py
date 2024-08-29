@@ -3,6 +3,8 @@ import socket
 import logging
 import time
 
+from common.utils import Bet, read_exact
+
 
 class Server:
     def __init__(self, port, listen_backlog):
@@ -58,11 +60,22 @@ class Server:
         """
         try:
             # TODO: Modify the receive to avoid short-reads
-            msg = self._client_socket.recv(1024).rstrip().decode('utf-8')
+            agency_bytes = read_exact(self._client_socket, 1)
+            agency = int.from_bytes(agency_bytes, 'big')
+            print("agency", agency)
+            bet_len_bytes = read_exact(self._client_socket, 2)
+            bet_len = int.from_bytes(bet_len_bytes, 'little')
+            print(bet_len)
+            bet_bytes = read_exact(self._client_socket, bet_len)
+            bet = Bet.deserialize(agency, bet_bytes)
+            print(bet)
+            """
             addr = self._client_socket.getpeername()
             logging.info(f'action: receive_message | result: success | ip: {addr[0]} | msg: {msg}')
             # TODO: Modify the send to avoid short-writes
-            self._client_socket.send("{}\n".format(msg).encode('utf-8'))
+            self._client_socket.send("{}\n".format(bet).encode('utf-8'))
+            """
+            self._client_socket.send("{}\n".format(bet).encode('utf-8'))
         except OSError as e:
             if self._should_stop:
                 # client socket has already been closed somewhere else and should ignore err 

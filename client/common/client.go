@@ -2,10 +2,8 @@ package common
 
 import (
 	"bufio"
-	"fmt"
 	"net"
 	"time"
-
 	"github.com/op/go-logging"
 )
 
@@ -70,6 +68,13 @@ func (c *Client) ShutdownGracefully() {
 
 // StartClientLoop Send messages to the client until some time threshold is met
 func (c *Client) StartClientLoop(done chan bool) {
+	bet := Bet{
+		Name:    "Noah",
+		Surname: "Masri",
+		ID:      43724680,
+		Date:    "2024-08-29",
+		Number:  4206,
+	}
 
 	// There is an autoincremental msgID to identify every message sent
 	// Messages if the message amount threshold has not been surpassed
@@ -81,12 +86,8 @@ func (c *Client) StartClientLoop(done chan bool) {
 			return
 		}
 		// TODO: Modify the send to avoid short-write
-		fmt.Fprintf(
-			c.conn,
-			"[CLIENT %v] Message N°%v\n",
-			c.config.ID,
-			msgID,
-		)
+		data := EncodeAgencyData(c.config.ID, bet) 
+		c.conn.Write(data)
 		msg, err := bufio.NewReader(c.conn).ReadString('\n')
 		c.conn.Close()
 		c.conn = nil
