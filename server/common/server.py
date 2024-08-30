@@ -3,7 +3,7 @@ import socket
 import logging
 import time
 
-from common.utils import Bet, read_exact
+from common.utils import Bet, read_exact, store_bets
 
 
 class Server:
@@ -49,7 +49,16 @@ class Server:
                 else:
                     # server exits if there was a problem with the socket
                     logging.info(f'action: error_exiting | result: in_progress | error: {e}')
-                break        
+                break
+
+    def __receive_bet(self) -> Bet:
+        agency_bytes = read_exact(self._client_socket, 1)
+        agency = int.from_bytes(agency_bytes, 'big')
+        bet_len_bytes = read_exact(self._client_socket, 2)
+        bet_len = int.from_bytes(bet_len_bytes, 'little')
+        bet_bytes = read_exact(self._client_socket, bet_len)
+        bet = Bet.deserialize(agency, bet_bytes)
+        return bet
 
     def __handle_client_connection(self):
         """
@@ -59,13 +68,9 @@ class Server:
         client socket will also be closed
         """
         try:
-            # TODO: Modify the receive to avoid short-reads
-            agency_bytes = read_exact(self._client_socket, 1)
-            agency = int.from_bytes(agency_bytes, 'big')
-            bet_len_bytes = read_exact(self._client_socket, 2)
-            bet_len = int.from_bytes(bet_len_bytes, 'little')
-            bet_bytes = read_exact(self._client_socket, bet_len)
-            bet = Bet.deserialize(agency, bet_bytes)
+            bet = self.__receive_bet()
+            store_bets([bet])
+            logging.info(f'action: apuesta_almacenada | result: success | dni: {bet.document} | numero: {bet.number}')
             """
             addr = self._client_socket.getpeername()
             logging.info(f'action: receive_message | result: success | ip: {addr[0]} | msg: {msg}')

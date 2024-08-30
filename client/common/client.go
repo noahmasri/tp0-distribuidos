@@ -95,7 +95,6 @@ func (c *Client) StartClientLoop(done chan bool) {
 	c.SendBet(bet)
 
 	msg, err := bufio.NewReader(c.conn).ReadString('\n')
-
 	if err != nil {
 		log.Errorf("action: receive_message | result: fail | client_id: %v | error: %v",
 			c.config.ID,
@@ -115,7 +114,5 @@ func (c *Client) StartClientLoop(done chan bool) {
 
 	// Wait a time before finishing
 	time.Sleep(c.config.LoopPeriod)
-
-	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
 	done <- true
 }
