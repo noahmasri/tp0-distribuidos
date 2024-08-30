@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"strconv"
-	"fmt"
 )
 
 type Bet struct {
@@ -44,6 +43,5 @@ func EncodeAgencyData(cli_id string, bet Bet) []byte {
 	binary.Write(&buffer, binary.LittleEndian, uint8(agency))
 	binary.Write(&buffer, binary.LittleEndian, uint16(len(bet_bytes)))
 	buffer.Write(bet_bytes)
-	fmt.Printf("Encoded Bet: %v\n", buffer)
 	return buffer.Bytes()
 }

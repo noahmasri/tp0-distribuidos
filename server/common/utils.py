@@ -3,7 +3,6 @@ import datetime
 import socket
 import time
 
-
 """ Bets storage location. """
 STORAGE_FILEPATH = "./bets.csv"
 """ Simulated winner number in the lottery contest. """

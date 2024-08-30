@@ -62,13 +62,10 @@ class Server:
             # TODO: Modify the receive to avoid short-reads
             agency_bytes = read_exact(self._client_socket, 1)
             agency = int.from_bytes(agency_bytes, 'big')
-            print("agency", agency)
             bet_len_bytes = read_exact(self._client_socket, 2)
             bet_len = int.from_bytes(bet_len_bytes, 'little')
-            print(bet_len)
             bet_bytes = read_exact(self._client_socket, bet_len)
             bet = Bet.deserialize(agency, bet_bytes)
-            print(bet)
             """
             addr = self._client_socket.getpeername()
             logging.info(f'action: receive_message | result: success | ip: {addr[0]} | msg: {msg}')

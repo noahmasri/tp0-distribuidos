@@ -66,6 +66,16 @@ func (c *Client) ShutdownGracefully() {
 	)
 }
 
+func (c *Client) SendBet(bet Bet){
+	data := EncodeAgencyData(c.config.ID, bet) 
+
+	totalWritten := 0
+	for totalWritten < len(data) {
+		written, _ := c.conn.Write(data[totalWritten:])
+		totalWritten += written
+	}
+}
+
 // StartClientLoop Send messages to the client until some time threshold is met
 func (c *Client) StartClientLoop(done chan bool) {
 	bet := Bet{
@@ -76,40 +86,36 @@ func (c *Client) StartClientLoop(done chan bool) {
 		Number:  4206,
 	}
 
-	// There is an autoincremental msgID to identify every message sent
-	// Messages if the message amount threshold has not been surpassed
-	for msgID := 1; msgID <= c.config.LoopAmount; msgID++ {
-		// Create the connection the server in every loop iteration. Send an
-		e := c.createClientSocket()
-		if e != nil {
-			done <- true
-			return
-		}
-		// TODO: Modify the send to avoid short-write
-		data := EncodeAgencyData(c.config.ID, bet) 
-		c.conn.Write(data)
-		msg, err := bufio.NewReader(c.conn).ReadString('\n')
-		c.conn.Close()
-		c.conn = nil
-
-		if err != nil {
-			log.Errorf("action: receive_message | result: fail | client_id: %v | error: %v",
-				c.config.ID,
-				err,
-			)
-			done <- true
-			return
-		}
-
-		log.Infof("action: receive_message | result: success | client_id: %v | msg: %v",
-			c.config.ID,
-			msg,
-		)
-
-		// Wait a time between sending one message and the next one
-		time.Sleep(c.config.LoopPeriod)
-
+	e := c.createClientSocket()
+	if e != nil {
+		done <- true
+		return
 	}
+
+	c.SendBet(bet)
+
+	msg, err := bufio.NewReader(c.conn).ReadString('\n')
+
+	if err != nil {
+		log.Errorf("action: receive_message | result: fail | client_id: %v | error: %v",
+			c.config.ID,
+			err,
+		)
+		done <- true
+		return
+	}
+
+	c.conn.Close()
+	c.conn = nil
+
+	log.Infof("action: receive_message | result: success | client_id: %v | msg: %v",
+		c.config.ID,
+		msg,
+	)
+
+	// Wait a time before finishing
+	time.Sleep(c.config.LoopPeriod)
+
 	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
 	done <- true
 }
