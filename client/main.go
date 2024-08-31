@@ -163,6 +163,8 @@ func main() {
 		Number:		uint16(bet.GetInt("number")),
 	}
 
+	common.ReadAgencyBets("1")
+
 	sigchan := make(chan os.Signal, 1)
 	signal.Notify(sigchan, syscall.SIGTERM)
 
