@@ -158,17 +158,24 @@ Para este ejercicio, se pide leer apuestas de un csv, y enviarlas de a tandas al
 * documento: 4 bytes por apuesta
 * fecha: 10 bytes por apuesta
 * numero apuesta: 2 bytes por apuesta
+
 Lo cual nos deja un máximo de 528 bytes por apuesta. En base a la investigación previa del set de datos, sabemos que el máximo en realidad es con 23 caracteres para el nombre, y 10 para el apellido, lo que nos da entonces en máximo de 51 bytes por apuesta. Con este número, tenemos entonces que la máxima cantidad de apuestas que entran en un batch son 156, ocupando 7956 bytes en el peor de los casos, y dejando la cantidad suficiente de bytes para agregar el número de agencia, y un campo nuevo que indique la cantidad de apuestas en el batch. 
 
 # Referencias
+[1] 
 [Instalar netcat en contenedor](https://stackoverflow.com/questions/52570028/i-am-unable-to-execute-netcat-command-within-docker-bash-terminal)
 
+[2]
 [Solucionar problema: 'netcat' has no installation candidate](https://forums.docker.com/t/package-netcat-has-no-installation-candidate-how-to-fix-this/136541)
 
+[3] 
 [Correr comandos de terminal en docker container](https://www.warp.dev/terminus/docker-run-bash)
 
+[4]
 [Librería para el manejo de señales en go](https://go.dev/pkg/os/signal/?m=old)
 
+[5] 
 [Ejemplos de manejo de señales en go](https://gobyexample.com/signals)
 
+[6] 
 [Ejemplos de waitgroups en go](https://gobyexample.com/waitgroups)
