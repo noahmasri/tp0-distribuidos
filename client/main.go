@@ -15,6 +15,24 @@ import (
 
 var log = logging.MustGetLogger("log")
 
+// no se lee solo de las env variables en caso de que alguien prefiera usar el configyaml
+func InitBet() *viper.Viper{
+	v := viper.New()
+
+	// Configure viper to read env variables with the ENV_ prefix
+	v.SetEnvPrefix("bet")
+
+	v.AutomaticEnv()
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	v.BindEnv("name")
+	v.BindEnv("surname")
+	v.BindEnv("id")
+	v.BindEnv("birthdate")
+	v.BindEnv("number")
+
+	return v
+}
+
 // InitConfig Function that uses viper library to parse configuration parameters.
 // Viper is configured to read variables from both environment variables and the
 // config file ./config.yaml. Environment variables takes precedence over parameters
@@ -110,15 +128,28 @@ func main() {
 		LoopPeriod:    v.GetDuration("loop.period"),
 	}
 
+	bet := InitBet()
+
+	betConfig := common.Bet{
+		Name:		bet.GetString("name"),
+		Surname:	bet.GetString("surname"),
+		ID:			uint32(bet.GetInt("id")),
+		Birthdate:	bet.GetString("birthdate"),
+		Number:		uint16(bet.GetInt("number")),
+	}
+
+	fmt.Printf("Name: %s, Surname: %s, ID: %d, Birthdate: %s, Number: %d\n",
+	betConfig.Name, betConfig.Surname, betConfig.ID, betConfig.Birthdate, betConfig.Number)
+
 	sigchan := make(chan os.Signal, 1)
 	signal.Notify(sigchan, syscall.SIGTERM)
 
 	// for client loop subroutine to let main know it is done
 	done := make(chan bool, 1)
 
-	client := common.NewClient(clientConfig)
+	client := common.NewClient(clientConfig, betConfig)
 	
-	go client.StartClientLoop(done)
+	go client.MakeBet(done)
 	
 	select {
 		case <-sigchan:

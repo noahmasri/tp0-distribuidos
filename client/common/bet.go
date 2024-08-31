@@ -10,7 +10,7 @@ type Bet struct {
 	Name        string
 	Surname		string
 	ID			uint32
-	Date		string
+	Birthdate	string
 	Number		uint16
 }
 
@@ -25,7 +25,7 @@ func (bet *Bet) EncodeToBytes() []byte {
 
 	binary.Write(&buffer, binary.LittleEndian, bet.ID)
 
-	binary.Write(&buffer, binary.LittleEndian, []byte(bet.Date))
+	binary.Write(&buffer, binary.LittleEndian, []byte(bet.Birthdate))
 	binary.Write(&buffer, binary.LittleEndian, bet.Number)
 
 	return buffer.Bytes()

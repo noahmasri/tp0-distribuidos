@@ -18,15 +18,17 @@ type ClientConfig struct {
 
 // Client Entity that encapsulates how
 type Client struct {
-	config ClientConfig
-	conn   net.Conn
+	config	ClientConfig
+	bet		Bet		
+	conn	net.Conn
 }
 
 // NewClient Initializes a new client receiving the configuration
 // as a parameter
-func NewClient(config ClientConfig) *Client {
+func NewClient(config ClientConfig, bet Bet) *Client {
 	client := &Client{
 		config: config,
+		bet: bet,
 	}
 	return client
 }
@@ -65,9 +67,15 @@ func (c *Client) ShutdownGracefully() {
 	)
 }
 
-func (c *Client) SendBet(bet Bet){
-	data := EncodeAgencyData(c.config.ID, bet) 
-
+func (c *Client) SendBet(){
+	data := EncodeAgencyData(c.config.ID, c.bet) 
+	log.Infof("action: apuesta | bet name %v , surname %v, id %v, birthdate %v, number %v",
+		c.bet.Name,
+		c.bet.Surname,
+		c.bet.ID,
+		c.bet.Birthdate,
+		c.bet.Number,
+	)
 	totalWritten := 0
 	for totalWritten < len(data) {
 		written, _ := c.conn.Write(data[totalWritten:])
@@ -75,49 +83,40 @@ func (c *Client) SendBet(bet Bet){
 	}
 }
 
-func logStatus(status ResponseStatus, bet Bet){
+func (c *Client) logStatus(status ResponseStatus){
 
 	switch status {
 	case OK:
 		log.Infof("action: apuesta_enviada | result: success | dni: %v | numero: %v",
-			bet.ID,
-			bet.Number,
+			c.bet.ID,
+			c.bet.Number,
 		)
 	case ERR:
 		log.Errorf("action: apuesta_enviada | result: fail | dni: %v | numero: %v | error: bet was not saved correctly",
-			bet.ID,
-			bet.Number,
+			c.bet.ID,
+			c.bet.Number,
 		)
 	case ABORT:
 		log.Errorf("action: apuesta_enviada | result: fail | dni: %v | numero: %v | error: server aborted",
-			bet.ID,
-			bet.Number,
+			c.bet.ID,
+			c.bet.Number,
 		)
 	default:
 		log.Errorf("action: apuesta_enviada | result: fail | dni: %v | numero: %v | error: server returned unknown state",
-			bet.ID,
-			bet.Number,
+			c.bet.ID,
+			c.bet.Number,
 		)
 	}
 }
 
-// StartClientLoop Send messages to the client until some time threshold is met
-func (c *Client) StartClientLoop(done chan bool) {
-	bet := Bet{
-		Name:    "Noah",
-		Surname: "Masri",
-		ID:      43724680,
-		Date:    "2024-08-29",
-		Number:  4206,
-	}
-
+func (c *Client) MakeBet(done chan bool) {
 	e := c.createClientSocket()
 	if e != nil {
 		done <- true
 		return
 	}
 
-	c.SendBet(bet)
+	c.SendBet()
 
 	buf := make([]byte, 1024)
 	_, err := c.conn.Read(buf)
@@ -130,11 +129,10 @@ func (c *Client) StartClientLoop(done chan bool) {
 		return
 	}
 
-	logStatus(ResponseStatus(buf[0]), bet)
+	c.logStatus(ResponseStatus(buf[0]))
 
 	c.conn.Close()
 	c.conn = nil
-
 
 	// Wait a time before finishing
 	time.Sleep(c.config.LoopPeriod)
