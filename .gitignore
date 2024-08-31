@@ -6,3 +6,6 @@ server/common/__pycache__
 
 # Executables
 bin/
+
+# Agency's datasets
+.data/*.csv
