@@ -117,6 +117,17 @@ func PrintConfig(v *viper.Viper) {
 	)
 }
 
+func PrintBetConfig(v *viper.Viper) {
+	log.Infof("action: config_bet | result: success | name: %s | surname: %s | id: %v | birthdate: %s | number: %v",
+		v.GetString("name"),
+		v.GetString("surname"),
+		v.GetInt("id"),
+		v.GetString("birthdate"),
+		v.GetInt("number"),
+	)
+}
+
+
 func main() {
 	v, err := InitConfig()
 	if err != nil {
@@ -142,6 +153,7 @@ func main() {
 		return
 	}
 
+	PrintBetConfig(bet)
 	betConfig := common.Bet{
 		Name:		bet.GetString("name"),
 		Surname:	bet.GetString("surname"),
