@@ -97,7 +97,6 @@ make docker-compose-down
 ```
 
 # Parte 4
-
 ## Ejercicio 5
 Para este ejercicio se pidió crear un protocolo de comunicación que permita que se emule una agencia de lotería, enviando por cliente una única apuesta. Este protocolo debe contener información suficiente para que se puedan evitar los short writes y los short reads.
 Antes de desarrollar el protocolo en sí, se realizó un pequeño análisis de los datos otorgados por la cátedra, donde se encontró que:
@@ -149,6 +148,17 @@ Para finalizar la ejecución de todos los contenedores:
 ```bash
 make docker-compose-down
 ```
+
+## Ejercicio 6
+Para este ejercicio, se pide leer apuestas de un csv, y enviarlas de a tandas al servidor. Para este, en primer lugar se pide definir la máxima cantidad de apuestas que se enviarán en un lote, si este lote no puede superar los 8kB de data. Dado el protocolo definido, sabemos que se envian por cada apuesta:
+* long nombre: 1 byte por apuesta
+* nombre: hasta 255 bytes por apuesta
+* long apellido: 1 byte por apuesta
+* apellido: hasta 255 bytes por apuesta
+* documento: 4 bytes por apuesta
+* fecha: 10 bytes por apuesta
+* numero apuesta: 2 bytes por apuesta
+Lo cual nos deja un máximo de 528 bytes por apuesta. En base a la investigación previa del set de datos, sabemos que el máximo en realidad es con 23 caracteres para el nombre, y 10 para el apellido, lo que nos da entonces en máximo de 51 bytes por apuesta. Con este número, tenemos entonces que la máxima cantidad de apuestas que entran en un batch son 156, ocupando 7956 bytes en el peor de los casos, y dejando la cantidad suficiente de bytes para agregar el número de agencia, y un campo nuevo que indique la cantidad de apuestas en el batch. 
 
 # Referencias
 [Instalar netcat en contenedor](https://stackoverflow.com/questions/52570028/i-am-unable-to-execute-netcat-command-within-docker-bash-terminal)
