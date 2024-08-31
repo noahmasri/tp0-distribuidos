@@ -4,8 +4,15 @@ import socket
 import logging
 import time
 
-from common.utils import Bet, read_exact, store_bets
+from common.utils import Bet, store_bets
 from common.response import ResponseStatus
+
+AGENCY_LEN=1
+BET_LEN=2
+
+class ClientClosedConnection(Exception):
+    def __init__(self, message):
+        super().__init__(message)
 
 class Server:
     def __init__(self, port, listen_backlog):
@@ -54,12 +61,18 @@ class Server:
                 break
 
     def __receive_bet(self) -> Bet:
-        agency_bytes = read_exact(self._client_socket, 1)
-        agency = int.from_bytes(agency_bytes, 'big')
-        bet_len_bytes = read_exact(self._client_socket, 2)
-        bet_len = int.from_bytes(bet_len_bytes, 'little')
-        bet_bytes = read_exact(self._client_socket, bet_len)
-        bet = Bet.deserialize(agency, bet_bytes)
+        curr = 0
+        # read as much as i can to avoid too many reads
+        msg = self._client_socket.recv(1024)
+        if not msg:
+            raise ClientClosedConnection("Client ended the connection")
+        agency = int.from_bytes([msg[curr]], 'little')
+        curr += AGENCY_LEN
+
+        bet_len = int.from_bytes(msg[curr:BET_LEN+curr], 'little')
+        curr += BET_LEN
+
+        bet = Bet.deserialize(agency, msg[curr:bet_len + curr])
         return bet
 
     def __handle_client_connection(self):
@@ -75,6 +88,9 @@ class Server:
             store_bets([bet])
             logging.info(f'action: apuesta_almacenada | result: success | dni: {bet.document} | numero: {bet.number}')
             self._client_socket.sendall(status.value.to_bytes(1, 'little'))
+        except ClientClosedConnection as e:
+            # do not send anything to client, since he closed its connection
+            logging.error("action: receive_message | result: fail | error: {e}")
         except (OSError, csv.Error) as e:
             if self._should_stop:
                 # client socket has already been closed somewhere else and should ignore err 

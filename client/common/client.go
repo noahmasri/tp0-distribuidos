@@ -158,7 +158,5 @@ func (c *Client) MakeBet(done chan bool) {
 	c.conn.Close()
 	c.conn = nil
 
-	// Wait a time before finishing
-	time.Sleep(c.config.LoopPeriod)
 	done <- true
 }

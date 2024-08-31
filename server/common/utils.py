@@ -58,17 +58,6 @@ class Bet:
         return (f"Bet(agency={self.agency}, first name={self.first_name}, last name={self.last_name}, "
                 f"document={self.document}, birthdate={self.birthdate}, number={self.number})")
 
-"""reads exactly <amount> bytes from socket"""
-def read_exact(sock: socket.socket, amount: int) -> bytes:
-    buffer = bytearray()
-    while len(buffer) < amount:
-        read = sock.recv(amount - len(buffer))
-        if not read:
-            # ver qué hacer en caso de short read
-            raise EOFError("Short read")
-        buffer.extend(read)
-    return bytes(buffer)
-
 """ Checks whether a bet won the prize or not. """
 def has_won(bet: Bet) -> bool:
     return bet.number == LOTTERY_WINNER_NUMBER
