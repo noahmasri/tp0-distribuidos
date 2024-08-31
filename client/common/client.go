@@ -92,7 +92,6 @@ func (c *Client) EncodeAgencyData() []byte {
 	var buffer bytes.Buffer
 	bet_bytes := c.bet.EncodeToBytes()
 	binary.Write(&buffer, binary.LittleEndian, uint8(agency))
-	binary.Write(&buffer, binary.LittleEndian, uint16(len(bet_bytes)))
 	buffer.Write(bet_bytes)
 	return buffer.Bytes()
 }

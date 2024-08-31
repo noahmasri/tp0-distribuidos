@@ -30,6 +30,15 @@ func InitBet() *viper.Viper{
 	v.BindEnv("birthdate")
 	v.BindEnv("number")
 
+	// check if all fields of the bet were set
+	requiredFields := []string{"name", "surname", "id", "birthdate", "number"}
+	for _, field := range requiredFields {
+		if !v.IsSet(field) {
+			log.Criticalf(" Field %s is mandatory in bet. Set it in compose as BET_%s.", field, field)
+			return nil
+		}
+	}
+
 	return v
 }
 
@@ -129,6 +138,9 @@ func main() {
 	}
 
 	bet := InitBet()
+	if bet == nil{
+		return
+	}
 
 	betConfig := common.Bet{
 		Name:		bet.GetString("name"),

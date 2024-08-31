@@ -96,6 +96,8 @@ En caso de querer ver la ejecución llegar a su fin, saltear el segundo paso y a
 make docker-compose-down
 ```
 
+# Parte 4
+
 ## Ejercicio 5
 Para este ejercicio se pidió crear un protocolo de comunicación que permita que se emule una agencia de lotería, enviando por cliente una única apuesta. Este protocolo debe contener información suficiente para que se puedan evitar los short writes y los short reads.
 Antes de desarrollar el protocolo en sí, se realizó un pequeño análisis de los datos otorgados por la cátedra, donde se encontró que:
@@ -109,6 +111,7 @@ Y además, se corroboró que:
 
 Teniendo en cuenta todas estas validaciones sobre los datos es que se desarrolló un protocolo que pretende maximizar la cantidad de apuestas que se pueden realizar por paquete o por segundo, disminuyendo la cantidad de bytes utilizados por cada una de estas. El protocolo entonces plantea que en un mensaje viajará en el siguiente orden la siguiente información:
 
+* Agencia: 1 byte, ya que por enunciado hay únicamente 5. 
 * Longitud del nombre: para esto, dado que el máximo es 23 caracteres, se asigna 1 byte, u8, que será suficiente para alojar el tamaño. Se permite que puedan aparecer nombres más largos, siempre y cuando no superen los 255 caracteres
 * Nombre: cantidad de bytes que se corresponden con la longitud. En base al byte anterior, se sabrá cuántos se deberá leer para obtener el nombre entero. 
 * Longitud del apellido: para esto, dado que el máximo es 10 caracteres, se asigna 1 byte. Se permite que puedan aparecer nombres más largos, siempre y cuando no superen los 255 caracteres.
@@ -117,7 +120,35 @@ Teniendo en cuenta todas estas validaciones sobre los datos es que se desarroll�
 * Fecha: campo de longitud fija de 10 bytes. Se incluyen los '-', ya que es práctico almacenarlos así, y se considera que se podría tardar más parseando y desparseando este campo.
 * Numero de apuesta: campo de longitud fija de 2 bytes, un u16, que permite alojar números que llegan hasta 65536, por lo que cualquier numero hasta el 9999 entran en este tipo de números.
 
+Finalmente, se definen para el servidor 3 códigos de respuesta:
+* Ok (0): si se pudo almacenar toda la información correctamente
+* Error (1): si no se pudo almacenar la información, o no se la pudo leer por completo
+* Abort (2): si el servidor recibió un sigterm o debió finalizar abruptamente por alguna señal
 
+### Como ejecutarlo
+Antes de ejecutarlo, debemos asegurarnos de tener las variables de entorno de la apuesta correctamente configuradas. Para esto, se debe encontrar en el cliente, dentro de la seccion environment del docker-compose.yaml algo similar a:
+```yaml
+environment:
+    - CLI_ID=2
+    - CLI_LOG_LEVEL=DEBUG
+    - BET_NAME=<name of betmaker>
+    - BET_SURNAME=<name of betmaker>
+    - BET_ID=<Id number of betmaker>
+    - BET_BIRTHDATE=<birthdate of betmaker in iso format (yyyy-mm-dd)>
+    - BET_NUMBER=<number bet corresponds to>
+```
+Tal como en los anteriores ejercicios, debemos ejecutarlo corriendo los distintos targets del makefile. En este caso correríamos, para iniciar el servidor y los clientes:
+```bash
+make docker-compose-up
+```
+Para ver los logs de las apuestas:
+```bash
+make docker-compose-logs
+```
+Para finalizar la ejecución de todos los contenedores:
+```bash
+make docker-compose-down
+```
 
 # Referencias
 [Instalar netcat en contenedor](https://stackoverflow.com/questions/52570028/i-am-unable-to-execute-netcat-command-within-docker-bash-terminal)

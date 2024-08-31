@@ -69,10 +69,7 @@ class Server:
         agency = int.from_bytes([msg[curr]], 'little')
         curr += AGENCY_LEN
 
-        bet_len = int.from_bytes(msg[curr:BET_LEN+curr], 'little')
-        curr += BET_LEN
-
-        bet = Bet.deserialize(agency, msg[curr:bet_len + curr])
+        bet = Bet.deserialize(agency, msg[curr:])
         return bet
 
     def __handle_client_connection(self):
