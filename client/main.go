@@ -138,9 +138,6 @@ func main() {
 		Number:		uint16(bet.GetInt("number")),
 	}
 
-	fmt.Printf("Name: %s, Surname: %s, ID: %d, Birthdate: %s, Number: %d\n",
-	betConfig.Name, betConfig.Surname, betConfig.ID, betConfig.Birthdate, betConfig.Number)
-
 	sigchan := make(chan os.Signal, 1)
 	signal.Notify(sigchan, syscall.SIGTERM)
 

@@ -67,20 +67,16 @@ func (c *Client) ShutdownGracefully() {
 	)
 }
 
-func (c *Client) SendBet(){
+func (c *Client) SendBet() error{
 	data := EncodeAgencyData(c.config.ID, c.bet) 
-	log.Infof("action: apuesta | bet name %v , surname %v, id %v, birthdate %v, number %v",
-		c.bet.Name,
-		c.bet.Surname,
-		c.bet.ID,
-		c.bet.Birthdate,
-		c.bet.Number,
-	)
 	totalWritten := 0
+	var err error
 	for totalWritten < len(data) {
-		written, _ := c.conn.Write(data[totalWritten:])
+		var written int
+		written, err = c.conn.Write(data[totalWritten:])
 		totalWritten += written
 	}
+	return err
 }
 
 func (c *Client) logStatus(status ResponseStatus){
@@ -109,6 +105,16 @@ func (c *Client) logStatus(status ResponseStatus){
 	}
 }
 
+func (c *Client)SendErrorMessageAndExit(done chan bool, action string, err error){
+	log.Errorf("action: %v | result: fail | client_id: %v | error: %v",
+		action,
+		c.config.ID,
+		err,
+	)
+	c.conn.Close()
+	done <- true
+}
+
 func (c *Client) MakeBet(done chan bool) {
 	e := c.createClientSocket()
 	if e != nil {
@@ -116,16 +122,16 @@ func (c *Client) MakeBet(done chan bool) {
 		return
 	}
 
-	c.SendBet()
+	err := c.SendBet()
+	if err != nil {
+		c.SendErrorMessageAndExit(done, "send_message", err)
+		return
+	}
 
 	buf := make([]byte, 1024)
-	_, err := c.conn.Read(buf)
+	_, err = c.conn.Read(buf)
 	if err != nil {
-		log.Errorf("action: receive_message | result: fail | client_id: %v | error: %v",
-			c.config.ID,
-			err,
-		)
-		done <- true
+		c.SendErrorMessageAndExit(done, "receive_message", err)
 		return
 	}
 
