@@ -1,10 +1,11 @@
+import csv
 import signal
 import socket
 import logging
 import time
 
 from common.utils import Bet, read_exact, store_bets
-
+from common.response import ResponseStatus
 
 class Server:
     def __init__(self, port, listen_backlog):
@@ -67,22 +68,19 @@ class Server:
         If a problem arises in the communication with the client, the
         client socket will also be closed
         """
+        status = ResponseStatus(0)
         try:
             bet = self.__receive_bet()
             store_bets([bet])
             logging.info(f'action: apuesta_almacenada | result: success | dni: {bet.document} | numero: {bet.number}')
-            """
-            addr = self._client_socket.getpeername()
-            logging.info(f'action: receive_message | result: success | ip: {addr[0]} | msg: {msg}')
-            # TODO: Modify the send to avoid short-writes
-            self._client_socket.send("{}\n".format(bet).encode('utf-8'))
-            """
-            self._client_socket.send("{}\n".format(bet).encode('utf-8'))
-        except OSError as e:
+            self._client_socket.sendall(status.value.to_bytes(1, 'little'))
+        except (OSError, csv.Error) as e:
             if self._should_stop:
                 # client socket has already been closed somewhere else and should ignore err 
                 return
             logging.error("action: receive_message | result: fail | error: {e}")
+            status = ResponseStatus(1)
+            self._client_socket.send(status.value.to_bytes(1, 'little'))
         finally:
             self._client_socket.close()
 

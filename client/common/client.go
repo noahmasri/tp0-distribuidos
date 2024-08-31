@@ -1,7 +1,6 @@
 package common
 
 import (
-	"bufio"
 	"net"
 	"time"
 	"github.com/op/go-logging"
@@ -76,6 +75,32 @@ func (c *Client) SendBet(bet Bet){
 	}
 }
 
+func logStatus(status ResponseStatus, bet Bet){
+
+	switch status {
+	case OK:
+		log.Infof("action: apuesta_enviada | result: success | dni: %v | numero: %v",
+			bet.ID,
+			bet.Number,
+		)
+	case ERR:
+		log.Errorf("action: apuesta_enviada | result: fail | dni: %v | numero: %v | error: bet was not saved correctly",
+			bet.ID,
+			bet.Number,
+		)
+	case ABORT:
+		log.Errorf("action: apuesta_enviada | result: fail | dni: %v | numero: %v | error: server aborted",
+			bet.ID,
+			bet.Number,
+		)
+	default:
+		log.Errorf("action: apuesta_enviada | result: fail | dni: %v | numero: %v | error: server returned unknown state",
+			bet.ID,
+			bet.Number,
+		)
+	}
+}
+
 // StartClientLoop Send messages to the client until some time threshold is met
 func (c *Client) StartClientLoop(done chan bool) {
 	bet := Bet{
@@ -94,7 +119,8 @@ func (c *Client) StartClientLoop(done chan bool) {
 
 	c.SendBet(bet)
 
-	msg, err := bufio.NewReader(c.conn).ReadString('\n')
+	buf := make([]byte, 1024)
+	_, err := c.conn.Read(buf)
 	if err != nil {
 		log.Errorf("action: receive_message | result: fail | client_id: %v | error: %v",
 			c.config.ID,
@@ -104,13 +130,11 @@ func (c *Client) StartClientLoop(done chan bool) {
 		return
 	}
 
+	logStatus(ResponseStatus(buf[0]), bet)
+
 	c.conn.Close()
 	c.conn = nil
 
-	log.Infof("action: receive_message | result: success | client_id: %v | msg: %v",
-		c.config.ID,
-		msg,
-	)
 
 	// Wait a time before finishing
 	time.Sleep(c.config.LoopPeriod)
