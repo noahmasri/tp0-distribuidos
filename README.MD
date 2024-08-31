@@ -160,3 +160,5 @@ make docker-compose-down
 [Librería para el manejo de señales en go](https://go.dev/pkg/os/signal/?m=old)
 
 [Ejemplos de manejo de señales en go](https://gobyexample.com/signals)
+
+[Ejemplos de waitgroups en go](https://gobyexample.com/waitgroups)
