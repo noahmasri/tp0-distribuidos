@@ -24,6 +24,7 @@ type Client struct {
 	config	ClientConfig
 	bet		Bet		
 	conn	net.Conn
+	end		bool
 }
 
 // NewClient Initializes a new client receiving the configuration
@@ -32,6 +33,7 @@ func NewClient(config ClientConfig, bet Bet) *Client {
 	client := &Client{
 		config: config,
 		bet: bet,
+		end: false,
 	}
 	return client
 }
@@ -57,7 +59,7 @@ func (c *Client) ShutdownGracefully() {
 	log.Infof("action: shutdown_gracefully | result: in_progress | client_id: %v | msg: received SIGTERM signal",
 			c.config.ID,
 		)
-
+	c.end = true
 	if c.conn != nil {
         c.conn.Close()
 		log.Infof("action: close_connection | result: success | client_id: %v",
@@ -122,14 +124,17 @@ func (c *Client) logStatus(status ResponseStatus){
 	}
 }
 
-func (c *Client)SendErrorMessageAndExit(done chan bool, action string, err error){
-	log.Errorf("action: %v | result: fail | client_id: %v | error: %v",
-		action,
-		c.config.ID,
-		err,
-	)
-	c.conn.Close()
-	done <- true
+func (c *Client) SendErrorMessageAndExit(done chan bool, action string, err error){
+	// only log error message if it wasnt because got an exception
+	if !c.end {
+		log.Errorf("action: %v | result: fail | client_id: %v | error: %v",
+			action,
+			c.config.ID,
+			err,
+		)
+		c.conn.Close()
+		done <- true
+	}
 }
 
 func (c *Client) MakeBet(done chan bool) {

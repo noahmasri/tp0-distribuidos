@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 	"os/signal"
+	"sync"
 	"syscall"
 	"github.com/op/go-logging"
 	"github.com/pkg/errors"
@@ -168,9 +169,14 @@ func main() {
 	// for client loop subroutine to let main know it is done
 	done := make(chan bool, 1)
 
+	var wg sync.WaitGroup
+	wg.Add(1)
+
 	client := common.NewClient(clientConfig, betConfig)
-	
-	go client.MakeBet(done)
+	go func() {
+		defer wg.Done()
+		client.MakeBet(done)
+	}()
 	
 	select {
 		case <-sigchan:
@@ -178,4 +184,5 @@ func main() {
 		case <-done:
 			return
 	}
+	wg.Wait()
 }
