@@ -22,6 +22,7 @@ class Server:
 
         if self._client_socket is not None:
             self._client_socket.close()
+            self._client_socket.send(ResponseStatus(2).value.to_bytes(1, 'little'))
             logging.info(f'action: close_client_socket | result: success | msg: received SIGTERM signal')
 
         self._server_socket.close()

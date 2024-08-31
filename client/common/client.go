@@ -3,6 +3,9 @@ package common
 import (
 	"net"
 	"time"
+	"bytes"
+	"encoding/binary"
+	"strconv"
 	"github.com/op/go-logging"
 )
 
@@ -68,7 +71,7 @@ func (c *Client) ShutdownGracefully() {
 }
 
 func (c *Client) SendBet() error{
-	data := EncodeAgencyData(c.config.ID, c.bet) 
+	data := c.EncodeAgencyData() 
 	totalWritten := 0
 	var err error
 	for totalWritten < len(data) {
@@ -77,6 +80,21 @@ func (c *Client) SendBet() error{
 		totalWritten += written
 	}
 	return err
+}
+
+func (c *Client) EncodeAgencyData() []byte {
+	agency, err := strconv.ParseInt(c.config.ID, 10, 8)
+	if err != nil {
+		log.Fatalf("action: parse_bets | result: fail | error: %v | msg: agency number is invalid", err)
+		return nil
+	}
+
+	var buffer bytes.Buffer
+	bet_bytes := c.bet.EncodeToBytes()
+	binary.Write(&buffer, binary.LittleEndian, uint8(agency))
+	binary.Write(&buffer, binary.LittleEndian, uint16(len(bet_bytes)))
+	buffer.Write(bet_bytes)
+	return buffer.Bytes()
 }
 
 func (c *Client) logStatus(status ResponseStatus){
