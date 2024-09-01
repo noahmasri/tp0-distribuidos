@@ -4,6 +4,8 @@ import socket
 import time
 from typing import Tuple
 
+from common.errors import ShouldReadStreamError
+
 """ Bets storage location. """
 STORAGE_FILEPATH = "./bets.csv"
 """ Simulated winner number in the lottery contest. """
@@ -35,24 +37,31 @@ class Bet:
     @staticmethod
     def deserialize(agency: int, data: bytes) -> Tuple['Bet', bytes]:
         curr = 0
-        name_len = int.from_bytes([data[curr]], 'little')
-        curr+=NAME_LEN
-        name = data[curr:name_len+curr].decode()
-        curr+=name_len
+        try:
+            name_len = int.from_bytes([data[curr]], 'little')
+            curr+=NAME_LEN
+            name = data[curr:name_len+curr].decode()
+            curr+=name_len
 
-        surname_len = int.from_bytes([data[curr]], 'little')
-        curr+=SURNAME_LEN
-        surname = data[curr:surname_len+curr].decode()
-        curr+=surname_len
+            surname_len = int.from_bytes([data[curr]], 'little')
+            curr+=SURNAME_LEN
+            surname = data[curr:surname_len+curr].decode()
+            curr+=surname_len
 
-        document=int.from_bytes(data[curr:ID_LEN+curr], 'little')
-        curr+=ID_LEN
+            document=int.from_bytes(data[curr:ID_LEN+curr], 'little')
+            curr+=ID_LEN
 
-        birthdate=data[curr:BIRTHDATE_LEN+curr].decode()
-        curr+=BIRTHDATE_LEN
+            birthdate=data[curr:BIRTHDATE_LEN+curr].decode()
+            curr+=BIRTHDATE_LEN
 
-        number = int.from_bytes(data[curr:curr+NUMBER_LEN], 'little')
-        curr+= NUMBER_LEN
+            number = int.from_bytes(data[curr:curr+NUMBER_LEN], 'little')
+            curr+= NUMBER_LEN
+        except IndexError:
+            raise ShouldReadStreamError("Must read more bytes from the stream to keep on creating bets")
+        
+        if len(data) < curr:
+            # necessary check, as slicing does not throw error
+            raise ShouldReadStreamError("Must read more bytes from the stream to keep on creating bets")
 
         return Bet(agency, name, surname, document, birthdate, number), data[curr:]
     

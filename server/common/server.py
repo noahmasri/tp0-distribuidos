@@ -3,16 +3,14 @@ import signal
 import socket
 import logging
 import time
+from typing import List
 
-from common.utils import Bet, store_bets
+from common.utils import Bet, ShouldReadStreamError, store_bets
 from common.response import ResponseStatus
+from common.errors import BetBatchError
 
 AGENCY_LEN=1
 BATCH_LEN=1
-
-class ClientClosedConnection(Exception):
-    def __init__(self, message):
-        super().__init__(message)
 
 class Server:
     def __init__(self, port, listen_backlog):
@@ -60,21 +58,42 @@ class Server:
                     logging.info(f'action: error_exiting | result: in_progress | error: {e}')
                 break
 
-    def __receive_bet(self) -> Bet:
+    def __obtain_all_batch_bets(self, agency: int, number: int, data: bytes) -> List[Bet]:
+        """
+        Receives all <number> of bets from stream,
+
+        If it doesn't receive all the information it should,
+        then server replies with an error, stating how many
+        bets were read appropriately.
+        """
+        bets=[]
+        while len(bets) < number:
+            try:
+                # Intentar deserializar una apuesta
+                bet, data = Bet.deserialize(agency, data)
+                bets.append(bet)
+            except ShouldReadStreamError:
+                # Leer más datos del socket si ocurre un error de deserialización
+                msg = self._client_socket.recv(1024)
+                if not msg:
+                    raise BetBatchError("There was an error parsing bet batch: couldnt get all required bets")
+                data += msg  # Concatenar los datos recibidos al buffer existente
+                
+        return bets
+
+    def __receive_bet_batch(self) -> List[Bet]:
         curr = 0
         # read as much as i can to avoid too many reads
         msg = self._client_socket.recv(1024)
         if not msg:
-            raise ClientClosedConnection("Client ended the connection")
+            raise BetBatchError("Client ended the connection")
         agency = int.from_bytes([msg[curr]], 'little')
         curr += AGENCY_LEN
 
         batch = int.from_bytes([msg[curr]], 'little')
         curr += BATCH_LEN
-        print(f'batch size:{batch}')
-        bet, remaining = Bet.deserialize(agency, msg[curr:])
-        print(f'Remaining len: {len(remaining)}')
-        return bet
+
+        return self.__obtain_all_batch_bets(agency, batch, msg[curr:])
 
     def __handle_client_connection(self):
         """
@@ -85,12 +104,12 @@ class Server:
         """
         status = ResponseStatus(0)
         try:
-            bet = self.__receive_bet()
-            store_bets([bet])
-            logging.info(f'action: apuesta_almacenada | result: success | dni: {bet.document} | numero: {bet.number}')
+            bets = self.__receive_bet_batch()
+            store_bets(bets)
+            logging.info(f'action: apuesta_recibida | result: success | cantidad: {len(bets)}')
             self._client_socket.sendall(status.value.to_bytes(1, 'little'))
-        except ClientClosedConnection as e:
-            # do not send anything to client, since he closed its connection
+        except BetBatchError as e:
+            # see how to handle error, anounce not all bets were received
             logging.error("action: receive_message | result: fail | error: {e}")
         except (OSError, csv.Error) as e:
             if self._should_stop:

@@ -192,3 +192,6 @@ Para no saturar al servidor ni el buffer del TCP stream, se decidió ir enviando
 
 [8]
 [Mover elementos de un slice al otro](https://stackoverflow.com/questions/74938295/how-to-move-elements-from-one-slice-to-another)
+
+[9]
+[Slicing en python](https://stackoverflow.com/questions/9490058/why-does-substring-slicing-with-index-out-of-range-work)
