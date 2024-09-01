@@ -166,7 +166,8 @@ func main() {
 	bg := common.NewBetGetter("1", uint8(v.GetInt("batch.maxAmount")))
 	bg.Read()
 	bg.Read()
-
+	bg.Read()
+	
 	sigchan := make(chan os.Signal, 1)
 	signal.Notify(sigchan, syscall.SIGTERM)
 

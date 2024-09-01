@@ -179,3 +179,6 @@ Lo cual nos deja un máximo de 528 bytes por apuesta. En base a la investigació
 
 [6] 
 [Ejemplos de waitgroups en go](https://gobyexample.com/waitgroups)
+
+[7]
+[Modificar offset de lectura en un archivo](https://pkg.go.dev/os#File.Seek)
