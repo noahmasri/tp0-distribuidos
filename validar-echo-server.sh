@@ -9,7 +9,7 @@ RESPONSE=$(docker run --rm --network tp0_testing_net --name netcat ubuntu:18.04 
     echo \"$TEST_MESSAGE\" | nc -w 1 "server" $PORT
 ")
 
-if [ "$RESPONSE" == "$TEST_MESSAGE" ]; then
+if [ "$RESPONSE" = "$TEST_MESSAGE" ]; then
     echo "action: test_echo_server | result: success"
 else
     echo "action: test_echo_server | result: fail"
