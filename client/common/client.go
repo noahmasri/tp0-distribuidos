@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net"
 	"time"
-
+	"os"
 	"github.com/op/go-logging"
 )
 
@@ -51,10 +51,20 @@ func (c *Client) createClientSocket() error {
 	return nil
 }
 
-func (c *Client) ShutdownGracefully() {
-	log.Infof("action: shutdown_gracefully | result: in_progress | client_id: %v | msg: received SIGTERM signal",
+func (c *Client) ShutdownGracefully(notifier chan os.Signal, done chan bool) {
+
+	select{
+	case <-notifier:
+		// if it gets notified it should continue with this flow
+		log.Infof("action: shutdown_gracefully | result: in_progress | client_id: %v | msg: received SIGTERM signal",
 			c.config.ID,
 		)
+	case <-done:
+		// gets signal that done channel was shutdown
+		return
+	}
+
+	done <- true
 
 	if c.conn != nil {
         c.conn.Close()
@@ -77,7 +87,6 @@ func (c *Client) StartClientLoop(done chan bool) {
 		// Create the connection the server in every loop iteration. Send an
 		e := c.createClientSocket()
 		if e != nil {
-			done <- true
 			return
 		}
 		// TODO: Modify the send to avoid short-write
@@ -96,7 +105,6 @@ func (c *Client) StartClientLoop(done chan bool) {
 				c.config.ID,
 				err,
 			)
-			done <- true
 			return
 		}
 
@@ -105,10 +113,12 @@ func (c *Client) StartClientLoop(done chan bool) {
 			msg,
 		)
 
-		// Wait a time between sending one message and the next one
-		time.Sleep(c.config.LoopPeriod)
-
+		select {
+		case <-done:
+			return
+		case <-time.After(c.config.LoopPeriod):
+			// continue looping	
+		}
 	}
 	log.Infof("action: loop_finished | result: success | client_id: %v", c.config.ID)
-	done <- true
 }

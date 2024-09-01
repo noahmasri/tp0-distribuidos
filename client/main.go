@@ -7,6 +7,7 @@ import (
 	"time"
 	"os/signal"
 	"syscall"
+	"sync"
 	"github.com/op/go-logging"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
@@ -117,13 +118,17 @@ func main() {
 	// for client loop subroutine to let main know it is done
 	done := make(chan bool, 1)
 
+	var wg sync.WaitGroup
+	wg.Add(1)
+
 	client := common.NewClient(clientConfig)
-	go client.StartClientLoop(done)
+	go func() {
+		defer wg.Done()
+		client.ShutdownGracefully(sigchan, done)
+	}()
 	
-	select {
-		case <-sigchan:
-			client.ShutdownGracefully()
-		case <-done:
-			return
-	}
+	client.StartClientLoop(done)
+	close(done)
+	
+	wg.Wait()
 }
