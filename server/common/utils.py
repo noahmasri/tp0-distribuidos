@@ -2,6 +2,7 @@ import csv
 import datetime
 import socket
 import time
+from typing import Tuple
 
 """ Bets storage location. """
 STORAGE_FILEPATH = "./bets.csv"
@@ -32,7 +33,7 @@ class Bet:
         self.number = int(number)
 
     @staticmethod
-    def deserialize(agency: int, data: bytes) -> 'Bet':
+    def deserialize(agency: int, data: bytes) -> Tuple['Bet', bytes]:
         curr = 0
         name_len = int.from_bytes([data[curr]], 'little')
         curr+=NAME_LEN
@@ -51,8 +52,9 @@ class Bet:
         curr+=BIRTHDATE_LEN
 
         number = int.from_bytes(data[curr:curr+NUMBER_LEN], 'little')
+        curr+= NUMBER_LEN
 
-        return Bet(agency, name, surname, document, birthdate, number)
+        return Bet(agency, name, surname, document, birthdate, number), data[curr:]
     
     def __repr__(self):
         return (f"Bet(agency={self.agency}, first name={self.first_name}, last name={self.last_name}, "

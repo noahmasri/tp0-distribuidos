@@ -117,8 +117,6 @@ func main() {
 		return
 	}
 
-	betGetter.ReadEntireFileInBatches()
-
 	sigchan := make(chan os.Signal, 1)
 	signal.Notify(sigchan, syscall.SIGTERM)
 
@@ -135,7 +133,6 @@ func main() {
 		client.ShutdownGracefully(sigchan, done)
 	}()
 
-	done <- true
-	
+	client.MakeBet(done)
 	wg.Wait()
 }

@@ -8,7 +8,7 @@ from common.utils import Bet, store_bets
 from common.response import ResponseStatus
 
 AGENCY_LEN=1
-BET_LEN=2
+BATCH_LEN=1
 
 class ClientClosedConnection(Exception):
     def __init__(self, message):
@@ -69,7 +69,11 @@ class Server:
         agency = int.from_bytes([msg[curr]], 'little')
         curr += AGENCY_LEN
 
-        bet = Bet.deserialize(agency, msg[curr:])
+        batch = int.from_bytes([msg[curr]], 'little')
+        curr += BATCH_LEN
+        print(f'batch size:{batch}')
+        bet, remaining = Bet.deserialize(agency, msg[curr:])
+        print(f'Remaining len: {len(remaining)}')
         return bet
 
     def __handle_client_connection(self):

@@ -27,7 +27,10 @@ def add_client(compose: dict[str, Any], client_id: int):
         ],
         'networks': ['testing_net'],
         'depends_on': ['server'],
-        'volumes': ['./client/config.yaml:/config.yaml']
+        'volumes': [
+            './client/config.yaml:/config.yaml',
+            './.data:/.data'
+        ]
     }
     return compose
 
