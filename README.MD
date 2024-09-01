@@ -162,11 +162,27 @@ Para este ejercicio, se pide leer apuestas de un csv, y enviarlas de a tandas al
 Lo cual nos deja un máximo de 528 bytes por apuesta. En base a la investigación previa del set de datos, sabemos que el máximo en realidad es con 23 caracteres para el nombre, y 10 para el apellido, lo que nos da entonces en máximo de 51 bytes por apuesta. Con este número, tenemos entonces que la máxima cantidad de apuestas que entran en un batch son 156, ocupando 7956 bytes en el peor de los casos, y dejando la cantidad suficiente de bytes para agregar el número de agencia, y un campo nuevo que indique la cantidad de apuestas en el batch. 
 
 ### Lectura del CSV
-En lugar de hacer una lectura por línea, para la lectura de los batches se optó por una solución un tanto más compleja, pero que ahorraba numerosas operaciones I/O. Se eligió arbitrariamente leer del archivo de a 4096 bytes, procesarlos separandolos por línea y generando apuestas con estas líneas. Para crear un batch luego se tiene que leer 1 o 2 veces de esta forma para llegar a los 156 del batch. Si en las dos lecturas en conjunto me paso del batchMax, entonces almaceno en mi estructura `betgetter` las entradas sobrantes para la siguiente iteración.
+En lugar de hacer una lectura por línea, para la lectura de los batches se optó por una solución un tanto más compleja, pero que ahorraba numerosas operaciones I/O. Se eligió arbitrariamente leer del archivo de a 4096 bytes, procesarlos separandolos por línea y generando apuestas con estas líneas. Para crear un batch luego se tiene que leer 1 o 2 veces de esta forma para llegar a los 156 del batch. Si en las dos lecturas en conjunto me paso del batchMax, entonces almaceno en mi estructura `BetGetter` las entradas sobrantes para la siguiente iteración.
 
 ### Modificación al protocolo
 Siguiendo con la forma de enviar las apuestas anteriormente, se realizó una leve modificación al protocolo. Ahora se envía una única vez por batch el número de agencia en conjunto con la cantidad de apuestas en el batch. La forma de serializar y enviar cada apuesta sigue siendo la misma.
 Para no saturar al servidor ni el buffer del TCP stream, se decidió ir enviando de a 1 batch, y en cuanto el servidor responde con la confirmación de lectura, entonces se manda el siguiente batch.
+
+### Procesamiento en el servidor
+Del lado del servidor, para recibir un batch lo que se hace es leer de a 1024 bytes del stream, e ir procesándolo de a tantas. Con esos 1024, se va avanzando y fraccionando los bytes pendientes de leer. Una vez que el querer parsear una apuesta de ese slice tira error cuando todavía tengo apuestas pendientes de leer, entonces volvemos a pedir 1024 bytes del stream, y así sucesivamente hasta alcanzar una cantidad de `batchSize` de apuestas.
+
+### Cómo ejecutarlo
+Como prerrequisitos, se pide que si no se tiene un archivo compose, se puede crear uno ejecutando el comando:
+
+```bash
+./generar-compose.sh docker-compose-dev.yaml <numero de clientes>
+```
+Además, se debe asegurar de contar con un archivo de data con la siguiente ruta:
+```bash
+/.data/agency-<id cliente>.csv
+```
+Teniendo la carpeta de data en la ruta al repositorio, y siendo el id del cliente el que se puede hallar en el compose como environment: CLI_ID.
+Para ejecutarlo luego de estos requisitos se debe seguir los mismos pasos que en el ejercicio 5.
 
 # Referencias
 [1] 
