@@ -16,33 +16,6 @@ import (
 
 var log = logging.MustGetLogger("log")
 
-// no se lee solo de las env variables en caso de que alguien prefiera usar el configyaml
-func InitBet() *viper.Viper{
-	v := viper.New()
-
-	// Configure viper to read env variables with the ENV_ prefix
-	v.SetEnvPrefix("bet")
-
-	v.AutomaticEnv()
-	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
-	v.BindEnv("name")
-	v.BindEnv("surname")
-	v.BindEnv("id")
-	v.BindEnv("birthdate")
-	v.BindEnv("number")
-
-	// check if all fields of the bet were set
-	requiredFields := []string{"name", "surname", "id", "birthdate", "number"}
-	for _, field := range requiredFields {
-		if !v.IsSet(field) {
-			log.Criticalf(" Field %s is mandatory in bet. Set it in compose as BET_%s.", field, field)
-			return nil
-		}
-	}
-
-	return v
-}
-
 // InitConfig Function that uses viper library to parse configuration parameters.
 // Viper is configured to read variables from both environment variables and the
 // config file ./config.yaml. Environment variables takes precedence over parameters
@@ -118,17 +91,6 @@ func PrintConfig(v *viper.Viper) {
 	)
 }
 
-func PrintBetConfig(v *viper.Viper) {
-	log.Infof("action: config_bet | result: success | name: %s | surname: %s | id: %v | birthdate: %s | number: %v",
-		v.GetString("name"),
-		v.GetString("surname"),
-		v.GetInt("id"),
-		v.GetString("birthdate"),
-		v.GetInt("number"),
-	)
-}
-
-
 func main() {
 	v, err := InitConfig()
 	if err != nil {
@@ -148,24 +110,15 @@ func main() {
 		LoopAmount:    v.GetInt("loop.amount"),
 		LoopPeriod:    v.GetDuration("loop.period"),
 	}
-	fmt.Printf("Batch size %s\n", v.GetString("batch.maxAmount"))
-	bet := InitBet()
-	if bet == nil{
+
+	betGetter := common.NewBetGetter(v.GetString("id"), v.GetInt("batch.maxAmount"))
+	if betGetter == nil{
+		log.Criticalf("Couldn't create bet getter to get batches of bets")
 		return
 	}
 
-	PrintBetConfig(bet)
-	betConfig := common.Bet{
-		Name:		bet.GetString("name"),
-		Surname:	bet.GetString("surname"),
-		ID:			uint32(bet.GetInt("id")),
-		Birthdate:	bet.GetString("birthdate"),
-		Number:		uint16(bet.GetInt("number")),
-	}
+	betGetter.ReadEntireFileInBatches()
 
-	bg := common.NewBetGetter("1", v.GetInt("batch.maxAmount"))
-	bg.ReadEntireFileInBatches()
-	
 	sigchan := make(chan os.Signal, 1)
 	signal.Notify(sigchan, syscall.SIGTERM)
 
@@ -175,14 +128,14 @@ func main() {
 	// barrier for main to wait for goroutine
 	var wg sync.WaitGroup
 	wg.Add(1)
-
-	client := common.NewClient(clientConfig, betConfig)
+	
+	client := common.NewClient(clientConfig, *betGetter)
 	go func() {
 		defer wg.Done()
 		client.ShutdownGracefully(sigchan, done)
 	}()
 
-	client.MakeBet(done)
+	done <- true
 	
 	wg.Wait()
 }

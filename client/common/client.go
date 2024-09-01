@@ -22,18 +22,18 @@ type ClientConfig struct {
 
 // Client Entity that encapsulates how
 type Client struct {
-	config	ClientConfig
-	bet		Bet		
-	conn	net.Conn
-	end		bool
+	config		ClientConfig
+	betGetter	BetGetter	
+	conn		net.Conn
+	end			bool
 }
 
 // NewClient Initializes a new client receiving the configuration
 // as a parameter
-func NewClient(config ClientConfig, bet Bet) *Client {
+func NewClient(config ClientConfig, betGetter BetGetter) *Client {
 	client := &Client{
 		config: config,
-		bet: bet,
+		betGetter: betGetter,
 		end: false,
 	}
 	return client
@@ -81,10 +81,13 @@ func (c *Client) ShutdownGracefully(notifier chan os.Signal, done chan bool) {
 	)
 }
 
-func (c *Client) SendBet() error{
-	data := c.EncodeAgencyData() 
+func (c *Client) SendBatch() error{
+	data, err := c.EncodeBatchData() 
+	if err != nil{
+		return err
+	}
+
 	totalWritten := 0
-	var err error
 	for totalWritten < len(data) {
 		var written int
 		written, err = c.conn.Write(data[totalWritten:])
@@ -93,42 +96,24 @@ func (c *Client) SendBet() error{
 	return err
 }
 
-func (c *Client) EncodeAgencyData() []byte {
-	agency, err := strconv.ParseInt(c.config.ID, 10, 8)
-	if err != nil {
-		log.Fatalf("action: parse_bets | result: fail | error: %v | msg: agency number is invalid", err)
-		return nil
-	}
-
-	var buffer bytes.Buffer
-	bet_bytes := c.bet.EncodeToBytes()
-	binary.Write(&buffer, binary.LittleEndian, uint8(agency))
-	buffer.Write(bet_bytes)
-	return buffer.Bytes()
-}
-
 func (c *Client) logStatus(status ResponseStatus){
 
 	switch status {
 	case OK:
-		log.Infof("action: apuesta_enviada | result: success | dni: %v | numero: %v",
-			c.bet.ID,
-			c.bet.Number,
+		log.Infof("action: apuesta_enviada | result: success | cantidad: %v",
+			c.betGetter.lastBatchSize,
 		)
 	case ERR:
-		log.Errorf("action: apuesta_enviada | result: fail | dni: %v | numero: %v | error: bet was not saved correctly",
-			c.bet.ID,
-			c.bet.Number,
+		log.Errorf("action: apuesta_enviada | result: fail | cantidad: %v | error: bet batch was not received correctly by server",
+			c.betGetter.lastBatchSize,
 		)
 	case ABORT:
-		log.Errorf("action: apuesta_enviada | result: fail | dni: %v | numero: %v | error: server aborted",
-			c.bet.ID,
-			c.bet.Number,
+		log.Errorf("action: apuesta_enviada | result: fail | cantidad: %v | error: server aborted",
+			c.betGetter.lastBatchSize,
 		)
 	default:
-		log.Errorf("action: apuesta_enviada | result: fail | dni: %v | numero: %v | error: server returned unknown state",
-			c.bet.ID,
-			c.bet.Number,
+		log.Errorf("action: apuesta_enviada | result: fail | cantidad: %v | error: server returned unknown state",
+			c.betGetter.lastBatchSize,
 		)
 	}
 }
@@ -146,6 +131,31 @@ func (c *Client) SendErrorMessageAndExit(done chan bool, action string, err erro
 	}
 }
 
+
+func (c *Client) EncodeBatchData() ([]byte, error) {
+	var buffer bytes.Buffer
+	agency, err := strconv.ParseInt(c.config.ID, 10, 8)
+	if err != nil {
+		log.Fatalf("action: parse_bets | result: fail | error: %v | msg: agency number is invalid", err)
+		return buffer.Bytes(), err
+	}
+
+	batch, err := c.betGetter.GetBatch()
+	if err != nil {
+		return buffer.Bytes(), err
+	}
+
+	binary.Write(&buffer, binary.LittleEndian, uint8(agency))
+	binary.Write(&buffer, binary.LittleEndian, uint8(len(batch)))
+	for _, bet := range batch{
+		bet_bytes := bet.EncodeToBytes()
+		buffer.Write(bet_bytes)
+	}
+
+	return buffer.Bytes(), nil
+}
+
+
 func (c *Client) MakeBet(done chan bool) {
 	e := c.createClientSocket()
 	if e != nil {
@@ -153,7 +163,7 @@ func (c *Client) MakeBet(done chan bool) {
 		return
 	}
 
-	err := c.SendBet()
+	err := c.SendBatch()
 	if err != nil {
 		c.SendErrorMessageAndExit(done, "send_message", err)
 		return

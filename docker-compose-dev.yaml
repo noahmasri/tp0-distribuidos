@@ -19,11 +19,6 @@ services:
     environment:
       - CLI_ID=1
       - CLI_LOG_LEVEL=DEBUG
-      - BET_NAME=Franco
-      - BET_SURNAME=Villanustre
-      - BET_ID=43442480
-      - BET_BIRTHDATE=2001-07-12
-      - BET_NUMBER=7574
     networks:
       - testing_net
     depends_on:
@@ -39,11 +34,6 @@ services:
     environment:
       - CLI_ID=2
       - CLI_LOG_LEVEL=DEBUG
-      - BET_NAME=Noah
-      - BET_SURNAME=Masri
-      - BET_ID=43724680
-      - BET_BIRTHDATE=2001-12-19
-      - BET_NUMBER=4000
     networks:
       - testing_net
     depends_on:

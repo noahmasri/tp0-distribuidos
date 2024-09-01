@@ -8,9 +8,10 @@ import (
 )
 
 type BetGetter struct {
-	file        *os.File
-    batchSize   int
-    pending     []Bet // leftovers from a read from file operation
+	file            *os.File
+    batchSize       int
+    lastBatchSize   int
+    pending         []Bet // leftovers from a read from file operation
 }
 
 const FileReadBytes = 4096 // arbitrarilly choose to read 4096 bytes from file each time
@@ -26,11 +27,12 @@ func NewBetGetter(cliId string, batchSize int) *BetGetter {
         return nil
     }
 
-	client := &BetGetter{
+	betGetter := &BetGetter{
 		file: file,
 		batchSize: batchSize,
+        lastBatchSize: 0,
 	}
-	return client
+	return betGetter
 }
 
 func (bg *BetGetter) ReadBetsFromFile() ([]Bet, error){
@@ -93,8 +95,7 @@ func (bg *BetGetter) GetBatch() ([]Bet, error){
         readBets, err := bg.ReadBetsFromFile()
         if err != nil {
             if err.Error() == "EOF" {
-                // do not propagate error if it only reached EOF
-                return bets, nil
+                break
             }
             return bets, err 
         }
@@ -103,6 +104,7 @@ func (bg *BetGetter) GetBatch() ([]Bet, error){
             bg.pending = append(bg.pending, readBets[len(readBets) - extra:]...)
         }
     }
+    bg.lastBatchSize = len(bets)
     return bets, nil
 }
 
@@ -114,12 +116,13 @@ func (bg *BetGetter) ReadEntireFileInBatches(){
             fmt.Println("Error:", err)
             break
         }
-		fmt.Printf("got %v bets from batch\n", len(bets))
-		acumulado += len(bets)
-        if len(bets) != 156 {
-            fmt.Println("Tamaño de bets no es 156, terminando.")
+        if len(bets) == 0 {
+            fmt.Println("Nothing read, reached EOF")
             break
         }
+        
+		fmt.Printf("got %v bets from batch\n", len(bets))
+		acumulado += len(bets)
 		fmt.Printf("acumulado upto now %v\n", acumulado)
     }
 
