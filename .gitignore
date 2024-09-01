@@ -4,5 +4,8 @@ server/common/__pycache__
 # Mac
 **.DS_Store
 
+# data
+/.data/*.csv
+
 # Executables
 bin/
