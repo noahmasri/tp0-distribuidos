@@ -166,24 +166,19 @@ func main() {
 	sigchan := make(chan os.Signal, 1)
 	signal.Notify(sigchan, syscall.SIGTERM)
 
-	// for client loop subroutine to let main know it is done
+	// for client loop to let goroutine know it is done
 	done := make(chan bool, 1)
 
-	// barrier for main to wait for goroutine
 	var wg sync.WaitGroup
 	wg.Add(1)
 
 	client := common.NewClient(clientConfig, betConfig)
 	go func() {
 		defer wg.Done()
-		client.MakeBet(done)
+		client.ShutdownGracefully(sigchan, done)
 	}()
 	
-	select {
-		case <-sigchan:
-			client.ShutdownGracefully()
-		case <-done:
-			return
-	}
+	client.MakeBet(done)
+	
 	wg.Wait()
 }
