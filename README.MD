@@ -96,7 +96,7 @@ En caso de querer ver la ejecución llegar a su fin, saltear el segundo paso y a
 make docker-compose-down
 ```
 
-# Parte 4
+# Parte 2
 ## Ejercicio 5
 Para este ejercicio se pidió crear un protocolo de comunicación que permita que se emule una agencia de lotería, enviando por cliente una única apuesta. Este protocolo debe contener información suficiente para que se puedan evitar los short writes y los short reads.
 Antes de desarrollar el protocolo en sí, se realizó un pequeño análisis de los datos otorgados por la cátedra, donde se encontró que:
