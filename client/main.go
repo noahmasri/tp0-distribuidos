@@ -163,11 +163,15 @@ func main() {
 		Number:		uint16(bet.GetInt("number")),
 	}
 
-	bg := common.NewBetGetter("1", uint8(v.GetInt("batch.maxAmount")))
-	bg.Read()
-	bg.Read()
-	bg.Read()
-	
+	bg := common.NewBetGetter("1", v.GetInt("batch.maxAmount"))
+	bets, err := bg.ReadBetsFromFile()
+	empty := []common.Bet{}
+	common.Transfer(&bets, &empty)
+	fmt.Printf("prior bets %v\n", bets)
+	fmt.Printf("prior empty %v\n", empty)	
+	bg.ReadBetsFromFile()
+	bg.ReadBetsFromFile()
+
 	sigchan := make(chan os.Signal, 1)
 	signal.Notify(sigchan, syscall.SIGTERM)
 
