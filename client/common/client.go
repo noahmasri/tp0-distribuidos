@@ -4,6 +4,7 @@ import (
 	"net"
 	"time"
 	"bytes"
+	"os"
 	"encoding/binary"
 	"strconv"
 	"github.com/op/go-logging"
@@ -55,10 +56,18 @@ func (c *Client) createClientSocket() error {
 	return nil
 }
 
-func (c *Client) ShutdownGracefully() {
-	log.Infof("action: shutdown_gracefully | result: in_progress | client_id: %v | msg: received SIGTERM signal",
+func (c *Client) ShutdownGracefully(notifier chan os.Signal, done chan bool) {
+
+	select{
+	case <-notifier:
+		// if it gets notified it should continue with this flow
+		log.Infof("action: shutdown_gracefully | result: in_progress | client_id: %v | msg: received SIGTERM signal",
 			c.config.ID,
 		)
+	case <-done:
+		// gets done from client channel
+		return
+	}
 	c.end = true
 	if c.conn != nil {
         c.conn.Close()

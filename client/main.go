@@ -163,12 +163,14 @@ func main() {
 		Number:		uint16(bet.GetInt("number")),
 	}
 
-	common.InitBetGetter("1")
+	bg := common.NewBetGetter("1", uint8(v.GetInt("batch.maxAmount")))
+	bg.Read()
+	bg.Read()
 
 	sigchan := make(chan os.Signal, 1)
 	signal.Notify(sigchan, syscall.SIGTERM)
 
-	// for client loop subroutine to let main know it is done
+	// for client loop to let goroutine know it is done
 	done := make(chan bool, 1)
 
 	// barrier for main to wait for goroutine
@@ -178,14 +180,11 @@ func main() {
 	client := common.NewClient(clientConfig, betConfig)
 	go func() {
 		defer wg.Done()
-		client.MakeBet(done)
+		client.ShutdownGracefully(sigchan, done)
 	}()
 	
-	select {
-		case <-sigchan:
-			client.ShutdownGracefully()
-		case <-done:
-			return
-	}
+
+	client.MakeBet(done)
+	
 	wg.Wait()
 }

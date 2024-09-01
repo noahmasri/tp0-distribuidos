@@ -8,21 +8,29 @@ import (
 
 type BetGetter struct {
 	file        *os.File
+    reader      *csv.Reader
     batchSize   uint8
 }
 
-func InitBetGetter(cli_id string){
-	filePath := fmt.Sprintf("/.data/agency-%s.csv", cli_id)
+func NewBetGetter(cliId string, batchSize uint8) *BetGetter {
+    filePath := fmt.Sprintf("/.data/agency-%s.csv", cliId)
     file, err := os.Open(filePath)
 
     if err != nil { 
-        log.Fatal("Error while reading the file", err) 
+        log.Fatal("Error opening data file: ", err) 
+        return nil
     }
 
-    defer file.Close()
+	client := &BetGetter{
+		file: file,
+		reader: csv.NewReader(file),
+		batchSize: batchSize,
+	}
+	return client
+}
 
-    reader := csv.NewReader(file)
-	record, err := reader.Read()
+func (bg *BetGetter) Read(){
+    record, err := bg.reader.Read()
     if err != nil { 
         fmt.Println("Error reading records") 
     } 
@@ -33,10 +41,4 @@ func InitBetGetter(cli_id string){
         fmt.Println("Error creating bet from record") 
     }
     fmt.Printf("Bet: %+v\n", bet)
-
-    record, err = reader.Read()
-    if err != nil { 
-        fmt.Println("Error reading records") 
-    } 
-    fmt.Println(record)
 }
