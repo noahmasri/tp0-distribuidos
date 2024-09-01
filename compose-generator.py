@@ -9,7 +9,7 @@ def add_server(compose: dict[str, Any]):
         'entrypoint': 'python3 /main.py',
         'environment': [
             'PYTHONUNBUFFERED=1',
-            'LOGGING_LEVEL=DEBUG'
+            'LOGGING_LEVEL=INFO'
         ],
         'networks': ['testing_net'],
         'volumes': ['./server/config.ini:/config.ini']
@@ -23,7 +23,7 @@ def add_client(compose: dict[str, Any], client_id: int):
         'entrypoint': '/client',
         'environment': [
             f'CLI_ID={client_id}',
-            'CLI_LOG_LEVEL=DEBUG'
+            'CLI_LOG_LEVEL=INFO'
         ],
         'networks': ['testing_net'],
         'depends_on': ['server'],
