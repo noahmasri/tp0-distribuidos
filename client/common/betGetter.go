@@ -60,10 +60,8 @@ func (bg *BetGetter) ReadBetsFromFile() ([]Bet, error){
             )
             continue
         }
-        fmt.Printf("Bet: %+v\n", bet)
         bets = append(bets, bet)
     }
-    fmt.Printf("got %v entrys\n", len(betsStrings))
     return bets, err
 }
 
@@ -71,11 +69,60 @@ func Transfer(arr0 *[]Bet, arr1 *[]Bet) {
     *arr0, *arr1 = *arr1, *arr0
 }
 
-/*
+// returns the amount of bets that were not inserted into 'bets' slice
+func AppendMissing(missing *int, bets *[]Bet, readBets []Bet) int {
+    if *missing > len(readBets){
+        *bets = append(*bets, readBets...)
+        *missing -= len(readBets)
+        return 0
+    }
+
+    // got more or same bets than what i needed, no more missing
+    extra := len(readBets) - *missing
+    *bets = append(*bets, readBets[:len(readBets) - extra]...) 
+    *missing = 0
+    return extra
+}
+
 func (bg *BetGetter) GetBatch() ([]Bet, error){
     bets := []Bet{}
-    transfer(bg.pending, bets)
-    fmt.Printf(bg.pending)
-    fmt.Printf(bets)
+    Transfer(&bg.pending, &bets)
+    missing := bg.batchSize - len(bets)
+
+    for missing > 0 {
+        readBets, err := bg.ReadBetsFromFile()
+        if err != nil {
+            if err.Error() == "EOF" {
+                // do not propagate error if it only reached EOF
+                return bets, nil
+            }
+            return bets, err 
+        }
+        extra := AppendMissing(&missing, &bets, readBets)
+        if extra > 0 {
+            bg.pending = append(bg.pending, readBets[len(readBets) - extra:]...)
+        }
+    }
+    return bets, nil
 }
-*/
+
+func (bg *BetGetter) ReadEntireFileInBatches(){
+    acumulado := 0
+	for {
+        bets, err := bg.GetBatch()
+        if err != nil {
+            fmt.Println("Error:", err)
+            break
+        }
+		fmt.Printf("got %v bets from batch\n", len(bets))
+		acumulado += len(bets)
+        if len(bets) != 156 {
+            fmt.Println("Tamaño de bets no es 156, terminando.")
+            break
+        }
+		fmt.Printf("acumulado upto now %v\n", acumulado)
+    }
+
+	fmt.Printf("got %v bets from whole file\n", acumulado)
+
+}

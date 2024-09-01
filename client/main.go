@@ -164,14 +164,8 @@ func main() {
 	}
 
 	bg := common.NewBetGetter("1", v.GetInt("batch.maxAmount"))
-	bets, err := bg.ReadBetsFromFile()
-	empty := []common.Bet{}
-	common.Transfer(&bets, &empty)
-	fmt.Printf("prior bets %v\n", bets)
-	fmt.Printf("prior empty %v\n", empty)	
-	bg.ReadBetsFromFile()
-	bg.ReadBetsFromFile()
-
+	bg.ReadEntireFileInBatches()
+	
 	sigchan := make(chan os.Signal, 1)
 	signal.Notify(sigchan, syscall.SIGTERM)
 
@@ -187,7 +181,6 @@ func main() {
 		defer wg.Done()
 		client.ShutdownGracefully(sigchan, done)
 	}()
-	
 
 	client.MakeBet(done)
 	
