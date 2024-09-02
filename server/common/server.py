@@ -85,15 +85,38 @@ class Server:
                 data += msg  # Concatenar los datos recibidos al buffer existente
                 
         return bets
+    
+    def __handle_bet_batch_message(self, agency, data):
+        try:
+            bets = self.__obtain_all_batch_bets(agency, data)
+            store_bets(bets)
+            logging.info(f'action: apuesta_recibida | result: success | cantidad: {len(bets)}')
+            self._client_socket.sendall(ResponseStatus.OK.value.to_bytes(1, 'little'))
+        except BetBatchError as e:
+            # error was because either client closed connection or because he sent wrong batch information
+            logging.error(f'action: receive_message | result: fail | error: {e}')
+        except (OSError, csv.Error) as e:
+            if self._should_stop:
+                # client socket has already been closed somewhere else and should ignore err 
+                return
+            logging.error(f'action: receive_message | result: fail | error: {e}')
+            self._client_socket.send(ResponseStatus.ERROR.value.to_bytes(1, 'little'))
+        finally:
+            self._client_socket.close()
 
     def __handle_message(self, code: MessageCode, agency: int, data: bytes):
         if code == MessageCode.BET:
-            print("handle bets")
-            return self.__obtain_all_batch_bets(agency, data)
+            self.__handle_bet_batch_message(agency, data)
         else:
             print("unimplemented message", code)
 
-    def __receive_bet_batch(self) -> List[Bet]:
+    def __handle_client_connection(self):
+        """
+        Read message from a specific client socket and closes the socket
+
+        If a problem arises in the communication with the client, the
+        client socket will also be closed
+        """
         curr = 0
         # read as much as i can to avoid too many reads
         msg = self._client_socket.recv(1024)
@@ -105,33 +128,7 @@ class Server:
         msg_code = int.from_bytes([msg[curr]], 'little')
         curr += MSG_CODE_LEN
     
-        return self.__handle_message(MessageCode(msg_code), agency, msg[curr:])
-
-    def __handle_client_connection(self):
-        """
-        Read message from a specific client socket and closes the socket
-
-        If a problem arises in the communication with the client, the
-        client socket will also be closed
-        """
-        status = ResponseStatus(0)
-        try:
-            bets = self.__receive_bet_batch()
-            store_bets(bets)
-            logging.info(f'action: apuesta_recibida | result: success | cantidad: {len(bets)}')
-            self._client_socket.sendall(status.value.to_bytes(1, 'little'))
-        except BetBatchError as e:
-            # error was because either client closed connection or because he sent wrong batch information
-            logging.error(f'action: receive_message | result: fail | error: {e}')
-        except (OSError, csv.Error) as e:
-            if self._should_stop:
-                # client socket has already been closed somewhere else and should ignore err 
-                return
-            logging.error(f'action: receive_message | result: fail | error: {e}')
-            status = ResponseStatus(1)
-            self._client_socket.send(status.value.to_bytes(1, 'little'))
-        finally:
-            self._client_socket.close()
+        self.__handle_message(MessageCode(msg_code), agency, msg[curr:])
 
     def __accept_new_connection(self):
         """
