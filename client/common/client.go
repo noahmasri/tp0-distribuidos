@@ -113,7 +113,6 @@ func (c *Client) SendErrorMessageAndExit(done chan bool, action string, err erro
 		if c.conn != nil {
 			c.conn.Close()
 		}
-		done <- true
 	}
 }
 
@@ -169,7 +168,6 @@ func (c *Client) MakeBet(done chan bool) {
 		
 		err = c.createClientSocket()
 		if err != nil {
-			done <- true
 			return
 		}
 
@@ -198,5 +196,5 @@ func (c *Client) MakeBet(done chan bool) {
 			// continue looping	
 		}
 	}
-	done <- true
 }
+
