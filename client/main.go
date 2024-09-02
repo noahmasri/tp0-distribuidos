@@ -91,14 +91,16 @@ func PrintConfig(v *viper.Viper) {
 	)
 }
 
-func main() {
+func SetUpClient() (c *common.Client){
 	v, err := InitConfig()
 	if err != nil {
 		log.Criticalf("%s", err)
+		return nil	
 	}
 
 	if err := InitLogger(v.GetString("log.level")); err != nil {
 		log.Criticalf("%s", err)
+		return nil
 	}
 
 	// Print program config with debugging purposes
@@ -112,8 +114,17 @@ func main() {
 	}
 
 	betGetter := common.NewBetGetter(v.GetString("id"), v.GetInt("batch.maxAmount"))
-	if betGetter == nil{
+	if betGetter == nil {
 		log.Criticalf("Couldn't create bet getter to get batches of bets")
+		return nil
+	}
+
+	return common.NewClient(clientConfig, *betGetter)
+}
+
+func main() {
+	client := SetUpClient()
+	if client == nil {
 		return
 	}
 
@@ -127,7 +138,6 @@ func main() {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	
-	client := common.NewClient(clientConfig, *betGetter)
 	go func() {
 		defer wg.Done()
 		client.ShutdownGracefully(sigchan, done)
