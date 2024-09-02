@@ -156,6 +156,7 @@ func (c *Client) MakeBet(done chan bool) {
 	defer c.Destroy()
 
 	for {
+
 		batch, err := c.betGetter.GetBatch()
         if err != nil {
             c.SendErrorMessageAndExit(done, "get_batch", err)
@@ -165,7 +166,7 @@ func (c *Client) MakeBet(done chan bool) {
         if len(batch) == 0 {
             break
         }
-
+		
 		err = c.createClientSocket()
 		if err != nil {
 			done <- true

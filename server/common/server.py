@@ -3,11 +3,11 @@ import signal
 import socket
 import logging
 import time
-from typing import List
+from typing import List, Tuple
 
 from common.utils import Bet, ShouldReadStreamError, store_bets
 from common.response import ResponseStatus
-from common.errors import BetBatchError
+from common.errors import BetBatchError, NoMessageReceivedError, WrongHeaderError
 from common.request import MessageCode
 
 AGENCY_LEN=1
@@ -87,22 +87,10 @@ class Server:
         return bets
     
     def __handle_bet_batch_message(self, agency, data):
-        try:
-            bets = self.__obtain_all_batch_bets(agency, data)
-            store_bets(bets)
-            logging.info(f'action: apuesta_recibida | result: success | cantidad: {len(bets)}')
-            self._client_socket.sendall(ResponseStatus.OK.value.to_bytes(1, 'little'))
-        except BetBatchError as e:
-            # error was because either client closed connection or because he sent wrong batch information
-            logging.error(f'action: receive_message | result: fail | error: {e}')
-        except (OSError, csv.Error) as e:
-            if self._should_stop:
-                # client socket has already been closed somewhere else and should ignore err 
-                return
-            logging.error(f'action: receive_message | result: fail | error: {e}')
-            self._client_socket.send(ResponseStatus.ERROR.value.to_bytes(1, 'little'))
-        finally:
-            self._client_socket.close()
+        bets = self.__obtain_all_batch_bets(agency, data)
+        store_bets(bets)
+        logging.info(f'action: apuesta_recibida | result: success | cantidad: {len(bets)}')
+        self._client_socket.sendall(ResponseStatus.OK.value.to_bytes(1, 'little'))
 
     def __handle_message(self, code: MessageCode, agency: int, data: bytes):
         if code == MessageCode.BET:
@@ -110,6 +98,25 @@ class Server:
         else:
             print("unimplemented message", code)
 
+    """ Read agency and message code from a specific client """
+    def __read_header(self) -> Tuple[MessageCode, int, bytes]:
+        curr = 0
+        # read as much as i can to avoid too many reads
+        msg = self._client_socket.recv(1024)
+        if not msg:
+            raise NoMessageReceivedError("No message was received from socket: client probably ended connection before sending anything")
+        
+        try:
+            agency = int.from_bytes([msg[curr]], 'little')
+            curr += AGENCY_LEN
+
+            msg_code = int.from_bytes([msg[curr]], 'little')
+            curr += MSG_CODE_LEN
+        except (IndexError, UnicodeDecodeError):
+            raise WrongHeaderError("Missing some bytes in message header")
+
+        return MessageCode(msg_code), agency, msg[curr:]
+    
     def __handle_client_connection(self):
         """
         Read message from a specific client socket and closes the socket
@@ -117,18 +124,22 @@ class Server:
         If a problem arises in the communication with the client, the
         client socket will also be closed
         """
-        curr = 0
-        # read as much as i can to avoid too many reads
-        msg = self._client_socket.recv(1024)
-        if not msg:
-            raise BetBatchError("Client ended the connection")
-        agency = int.from_bytes([msg[curr]], 'little')
-        curr += AGENCY_LEN
-
-        msg_code = int.from_bytes([msg[curr]], 'little')
-        curr += MSG_CODE_LEN
     
-        self.__handle_message(MessageCode(msg_code), agency, msg[curr:])
+        try:
+            msg_code, agency, data = self.__read_header()
+            self.__handle_message(msg_code, agency, data)
+        except (BetBatchError, WrongHeaderError) as e:
+            # error was because either client closed connection or because he sent wrong batch information
+            logging.error(f'action: receive_message | result: fail | error: {e}')
+            self._client_socket.send(ResponseStatus.BAD_REQUEST.value.to_bytes(1, 'little'))
+        except (OSError, csv.Error, NoMessageReceivedError) as e:
+            if self._should_stop:
+                # client socket has already been closed somewhere else and should ignore err 
+                return
+            logging.error(f'action: receive_message | result: fail | error: {e}')
+            self._client_socket.send(ResponseStatus.ERROR.value.to_bytes(1, 'little'))
+        finally:
+            self._client_socket.close()
 
     def __accept_new_connection(self):
         """
