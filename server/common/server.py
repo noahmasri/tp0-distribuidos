@@ -60,7 +60,7 @@ class Server:
                     logging.info(f'action: error_exiting | result: in_progress | error: {e}')
                 break
 
-    def __obtain_all_batch_bets(self, agency: int, number: int, data: bytes) -> List[Bet]:
+    def __obtain_all_batch_bets(self, agency: int, data: bytes) -> List[Bet]:
         """
         Receives all <number> of bets from stream,
 
@@ -68,8 +68,11 @@ class Server:
         then server replies with an error, stating how many
         bets were read appropriately.
         """
+        batch_num = int.from_bytes([data[0]], 'little')
+        data=data[1:]
+
         bets=[]
-        while len(bets) < number:
+        while len(bets) < batch_num:
             try:
                 # Intentar deserializar una apuesta
                 bet, data = Bet.deserialize(agency, data)
@@ -83,6 +86,13 @@ class Server:
                 
         return bets
 
+    def __handle_message(self, code: MessageCode, agency: int, data: bytes):
+        if code == MessageCode.BET:
+            print("handle bets")
+            return self.__obtain_all_batch_bets(agency, data)
+        else:
+            print("unimplemented message", code)
+
     def __receive_bet_batch(self) -> List[Bet]:
         curr = 0
         # read as much as i can to avoid too many reads
@@ -94,12 +104,8 @@ class Server:
 
         msg_code = int.from_bytes([msg[curr]], 'little')
         curr += MSG_CODE_LEN
-        print(MessageCode(msg_code))
-
-        batch = int.from_bytes([msg[curr]], 'little')
-        curr += BATCH_LEN
-
-        return self.__obtain_all_batch_bets(agency, batch, msg[curr:])
+    
+        return self.__handle_message(MessageCode(msg_code), agency, msg[curr:])
 
     def __handle_client_connection(self):
         """
