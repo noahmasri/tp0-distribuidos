@@ -40,14 +40,16 @@ func NewClient(config ClientConfig, betGetter BetGetter) *Client {
 }
 
 func (c *Client) Destroy(){
-	c.end = true
-	if c.conn != nil {
-        c.conn.Close()
-    }
-	log.Infof("action: close_connection | result: success | client_id: %v",
-		c.config.ID,
-	)
-	c.betGetter.Destroy()
+	if !c.end{
+		c.end = true
+		if c.conn != nil {
+			c.conn.Close()
+		}
+		log.Infof("action: close_connection | result: success | client_id: %v",
+			c.config.ID,
+		)
+		c.betGetter.Destroy()
+	}
 }
 
 // CreateClientSocket Initializes client socket. In case of
@@ -76,11 +78,12 @@ func (c *Client) ShutdownGracefully(notifier chan os.Signal, done chan bool) {
 			c.config.ID,
 		)
 	case <-done:
-		// gets done from client channel
+		// gets signal that done channel was shutdown
 		return
 	}
-	c.Destroy()
+	done <- true
 
+	c.Destroy()
 	log.Infof("action: shutdown_gracefully | result: success | client_id: %v",
 		c.config.ID,
 	)
@@ -194,7 +197,13 @@ func (c *Client) MakeBet(done chan bool) {
 
 		c.conn.Close()
 		c.conn = nil
-		time.Sleep(c.config.LoopPeriod)
+
+		select {
+		case <-done:
+			return
+		case <-time.After(c.config.LoopPeriod):
+			// continue looping	
+		}
 	}
 	done <- true
 }

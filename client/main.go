@@ -134,5 +134,7 @@ func main() {
 	}()
 
 	client.MakeBet(done)
+	close(done)
+	
 	wg.Wait()
 }
