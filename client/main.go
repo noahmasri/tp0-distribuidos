@@ -149,7 +149,7 @@ func main() {
 		client.ShutdownGracefully(sigchan, done)
 	}()
 
-	client.MakeBets(done)
+	client.ExecuteLotteryClient(done)
 	close(done)
 	
 	wg.Wait()

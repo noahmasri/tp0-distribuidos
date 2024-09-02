@@ -91,15 +91,17 @@ func (c *Client) ShutdownGracefully(notifier chan os.Signal, done chan bool) {
 	)
 }
 
-func (c *Client) logStatus(status ResponseStatus){
+func (c *Client) logStatus(status ResponseStatus, action string){
 	errMsg := status.GetStatusProperties()
 	if errMsg != "" {
-		log.Infof("action: apuesta_enviada | result: fail | cantidad: %v | error: %v",
+		log.Infof("action: %v | result: fail | cantidad: %v | error: %v",
+			action,
 			c.betGetter.lastBatchSize,
 			errMsg,
 		)
 	}
-	log.Infof("action: apuesta_enviada | result: success | cantidad: %v",
+	log.Infof("action: %v | result: success | cantidad: %v",
+		action,
 		c.betGetter.lastBatchSize,
 	)
 }
@@ -145,7 +147,7 @@ func (c *Client) SendBatch(batch []Bet) error{
 	return c.SendAll(buffer.Bytes())
 }
 
-func (c *Client) SendEndBetting(batch []Bet) error {
+func (c *Client) SendEndBetting() error {
 	var buffer bytes.Buffer
 	
 	binary.Write(&buffer, binary.LittleEndian, c.agency)
@@ -183,7 +185,7 @@ func (c *Client) MakeBets(done chan bool) error {
 			return c.SendErrorMessageAndExit(done, "receive_message", err)
 		}
 
-		c.logStatus(ResponseStatus(buf[0]))
+		c.logStatus(ResponseStatus(buf[0]), "apuesta_enviada")
 
 		c.conn.Close()
 		c.conn = nil
@@ -197,4 +199,34 @@ func (c *Client) MakeBets(done chan bool) error {
 	}
 
 	return nil
+}
+
+func (c *Client) ExecuteLotteryClient(done chan bool) {
+	err := c.MakeBets(done)
+	if err != nil {
+		return
+	}
+
+	err = c.createClientSocket()
+	if err != nil {
+		return
+	}
+
+	err = c.SendEndBetting()
+	if err != nil {
+		c.SendErrorMessageAndExit(done, "send_end_betting_message", err)
+		return
+	}
+
+	buf := make([]byte, 1)
+	_, err = c.conn.Read(buf)
+	if err != nil {
+		c.SendErrorMessageAndExit(done, "receive_end_bet_response", err)
+		return
+	}
+
+	c.logStatus(ResponseStatus(buf[0]), "receive_end_bet_response")
+	c.conn.Close()
+	c.conn = nil
+
 }
