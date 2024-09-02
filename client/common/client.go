@@ -117,9 +117,7 @@ func (c *Client) SendErrorMessageAndExit(done chan bool, action string, err erro
 	}
 }
 
-func (c *Client) SendBatch(batch []Bet) error{
-	data:= c.EncodeBatchData(batch) 
-
+func (c *Client) SendAll(data []byte) error{
 	totalWritten := 0
 	for totalWritten < len(data) {
 		written, err := c.conn.Write(data[totalWritten:])
@@ -131,7 +129,7 @@ func (c *Client) SendBatch(batch []Bet) error{
 	return nil
 }
 
-func (c *Client) EncodeBatchData(batch []Bet) []byte {
+func (c *Client) SendBatch(batch []Bet) error{
 	var buffer bytes.Buffer
 	
 	binary.Write(&buffer, binary.LittleEndian, c.agency)
@@ -142,7 +140,7 @@ func (c *Client) EncodeBatchData(batch []Bet) []byte {
 		buffer.Write(bet_bytes)
 	}
 
-	return buffer.Bytes()
+	return c.SendAll(buffer.Bytes())
 }
 
 func (c *Client) MakeBet(done chan bool) {
