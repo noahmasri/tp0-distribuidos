@@ -149,7 +149,7 @@ func main() {
 		client.ShutdownGracefully(sigchan, done)
 	}()
 
-	client.MakeBet(done)
+	client.MakeBets(done)
 	close(done)
 	
 	wg.Wait()

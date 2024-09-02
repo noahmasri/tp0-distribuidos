@@ -4,6 +4,7 @@ import (
 	"net"
 	"time"
 	"bytes"
+	"errors"
 	"os"
 	"encoding/binary"
 	"github.com/op/go-logging"
@@ -103,7 +104,7 @@ func (c *Client) logStatus(status ResponseStatus){
 	)
 }
 
-func (c *Client) SendErrorMessageAndExit(done chan bool, action string, err error){
+func (c *Client) SendErrorMessageAndExit(done chan bool, action string, err error) error{
 	// only log error message if it wasnt because got an exception
 	if !c.end {
 		log.Errorf("action: %v | result: fail | client_id: %v | error: %v",
@@ -115,6 +116,7 @@ func (c *Client) SendErrorMessageAndExit(done chan bool, action string, err erro
 			c.conn.Close()
 		}
 	}
+	return err
 }
 
 func (c *Client) SendAll(data []byte) error{
@@ -143,15 +145,22 @@ func (c *Client) SendBatch(batch []Bet) error{
 	return c.SendAll(buffer.Bytes())
 }
 
-func (c *Client) MakeBet(done chan bool) {
+func (c *Client) SendEndBetting(batch []Bet) error {
+	var buffer bytes.Buffer
+	
+	binary.Write(&buffer, binary.LittleEndian, c.agency)
+	binary.Write(&buffer, binary.LittleEndian, END_BETTING)
+
+	return c.SendAll(buffer.Bytes())
+}
+
+func (c *Client) MakeBets(done chan bool) error {
 	defer c.Destroy()
 
 	for {
-
 		batch, err := c.betGetter.GetBatch()
         if err != nil {
-            c.SendErrorMessageAndExit(done, "get_batch", err)
-            break
+            return c.SendErrorMessageAndExit(done, "get_batch", err)
         }
 
         if len(batch) == 0 {
@@ -160,20 +169,18 @@ func (c *Client) MakeBet(done chan bool) {
 		
 		err = c.createClientSocket()
 		if err != nil {
-			return
+			return err
 		}
 
 		err = c.SendBatch(batch)
 		if err != nil {
-			c.SendErrorMessageAndExit(done, "send_message", err)
-			return
+			return c.SendErrorMessageAndExit(done, "send_message", err)
 		}
 
 		buf := make([]byte, 1)
 		_, err = c.conn.Read(buf)
 		if err != nil {
-			c.SendErrorMessageAndExit(done, "receive_message", err)
-			return
+			return c.SendErrorMessageAndExit(done, "receive_message", err)
 		}
 
 		c.logStatus(ResponseStatus(buf[0]))
@@ -183,10 +190,11 @@ func (c *Client) MakeBet(done chan bool) {
 
 		select {
 		case <-done:
-			return
+			return errors.New("Should break: got SIGTERM")
 		case <-time.After(c.config.LoopPeriod):
 			// continue looping	
 		}
 	}
-}
 
+	return nil
+}

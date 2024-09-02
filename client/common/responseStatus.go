@@ -7,10 +7,10 @@ const (
     ERR
     BAD_REQUEST
     ABORT
-    LOTTERY_NOT_DONE
+    LOTTERY_NOT_DONE // from here on it is unhandled
     SEND_WINNERS
+    NO_MORE_BETS_ALLOWED
 )
-
 
 func (status ResponseStatus) GetStatusProperties() (errorMsg string){
         switch status {
