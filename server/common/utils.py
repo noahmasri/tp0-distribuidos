@@ -68,9 +68,21 @@ class Bet:
         return (f"Bet(agency={self.agency}, first name={self.first_name}, last name={self.last_name}, "
                 f"document={self.document}, birthdate={self.birthdate}, number={self.number})")
 
+    def __is_from_agency(self, agency: int):
+        return self.agency == agency
+    
+    def __get_document(self):
+        return self.document
+
 """ Checks whether a bet won the prize or not. """
 def has_won(bet: Bet) -> bool:
     return bet.number == LOTTERY_WINNER_NUMBER
+
+def get_winners_from_agency(agency: int) -> list[Bet]:
+    all_bets = load_bets() # optimize it
+    # keeps only winners from a certain agency, and then maps bet to only the ID of the bettor
+    return list(map(lambda bet: bet.id, filter(lambda bet: bet.__is_from_agency(agency) and has_won(bet), all_bets)))
+
 
 """
 Persist the information of each bet in the STORAGE_FILEPATH file.

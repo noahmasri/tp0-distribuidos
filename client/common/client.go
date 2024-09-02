@@ -141,6 +141,7 @@ func (c *Client) EncodeBatchData(batch []Bet) ([]byte, error) {
 	}
 
 	binary.Write(&buffer, binary.LittleEndian, uint8(agency))
+	binary.Write(&buffer, binary.LittleEndian, BET)
 	binary.Write(&buffer, binary.LittleEndian, uint8(len(batch)))
 	for _, bet := range batch{
 		bet_bytes := bet.EncodeToBytes()

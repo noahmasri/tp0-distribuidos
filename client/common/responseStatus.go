@@ -10,17 +10,16 @@ const (
 )
 
 func (status ResponseStatus) GetStatusProperties() (errorMsg string){
- 
-	switch status {
-	case OK:
+        switch status {
+        case OK:
         return ""
-	case ERR:
+        case ERR:
         return "bet batch was not stores correctly by server"
-	case BAD_REQUEST:
+        case BAD_REQUEST:
         return "bet batch was not sent appropriately. either there was data missing, or the batch amount was parsed incorrectly"
-    case ABORT:
+        case ABORT:
         return "server aborted"
-	default:
-		return "server returned unknown state"
-	}
+        default:
+                return "server returned unknown state"
+        }
 }

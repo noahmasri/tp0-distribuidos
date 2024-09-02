@@ -8,9 +8,11 @@ from typing import List
 from common.utils import Bet, ShouldReadStreamError, store_bets
 from common.response import ResponseStatus
 from common.errors import BetBatchError
+from common.request import MessageCode
 
 AGENCY_LEN=1
 BATCH_LEN=1
+MSG_CODE_LEN=1
 
 class Server:
     def __init__(self, port, listen_backlog):
@@ -89,6 +91,10 @@ class Server:
             raise BetBatchError("Client ended the connection")
         agency = int.from_bytes([msg[curr]], 'little')
         curr += AGENCY_LEN
+
+        msg_code = int.from_bytes([msg[curr]], 'little')
+        curr += MSG_CODE_LEN
+        print(MessageCode(msg_code))
 
         batch = int.from_bytes([msg[curr]], 'little')
         curr += BATCH_LEN
