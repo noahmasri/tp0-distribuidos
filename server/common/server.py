@@ -109,7 +109,7 @@ class Server:
             logging.info(f'action: apuesta_recibida | result: success | cantidad: {len(bets)}')
             self._client_socket.sendall(status.value.to_bytes(1, 'little'))
         except BetBatchError as e:
-            # see how to handle error, anounce not all bets were received
+            # error was because either client closed connection or because he sent wrong batch information
             logging.error(f'action: receive_message | result: fail | error: {e}')
         except (OSError, csv.Error) as e:
             if self._should_stop:

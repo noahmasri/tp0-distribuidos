@@ -90,25 +90,16 @@ func (c *Client) ShutdownGracefully(notifier chan os.Signal, done chan bool) {
 }
 
 func (c *Client) logStatus(status ResponseStatus){
-
-	switch status {
-	case OK:
-		log.Infof("action: apuesta_enviada | result: success | cantidad: %v",
+	errMsg := status.GetStatusProperties()
+	if errMsg != "" {
+		log.Infof("action: apuesta_enviada | result: fail | cantidad: %v | error: %v",
 			c.betGetter.lastBatchSize,
-		)
-	case ERR:
-		log.Errorf("action: apuesta_enviada | result: fail | cantidad: %v | error: bet batch was not received correctly by server",
-			c.betGetter.lastBatchSize,
-		)
-	case ABORT:
-		log.Errorf("action: apuesta_enviada | result: fail | cantidad: %v | error: server aborted",
-			c.betGetter.lastBatchSize,
-		)
-	default:
-		log.Errorf("action: apuesta_enviada | result: fail | cantidad: %v | error: server returned unknown state",
-			c.betGetter.lastBatchSize,
+			errMsg,
 		)
 	}
+	log.Infof("action: apuesta_enviada | result: success | cantidad: %v",
+		c.betGetter.lastBatchSize,
+	)
 }
 
 func (c *Client) SendErrorMessageAndExit(done chan bool, action string, err error){
