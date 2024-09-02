@@ -22,8 +22,8 @@ func (bg *BetGetter) Destroy(){
     if bg.file != nil{
         bg.file.Close()
         bg.file = nil
-        log.Infof("action: close_file | result: success")
     }
+    log.Infof("action: close_file | result: success")
 }
 
 func NewBetGetter(cliId string, batchSize int) *BetGetter {

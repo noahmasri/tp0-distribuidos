@@ -86,7 +86,6 @@ class Server:
         # read as much as i can to avoid too many reads
         msg = self._client_socket.recv(1024)
         if not msg:
-            print("error in receive bacth")
             raise BetBatchError("Client ended the connection")
         agency = int.from_bytes([msg[curr]], 'little')
         curr += AGENCY_LEN
@@ -112,17 +111,14 @@ class Server:
         except BetBatchError as e:
             # see how to handle error, anounce not all bets were received
             logging.error(f'action: receive_message | result: fail | error: {e}')
-            print("batch err")
         except (OSError, csv.Error) as e:
             if self._should_stop:
                 # client socket has already been closed somewhere else and should ignore err 
                 return
-            print("os or csv err")
             logging.error(f'action: receive_message | result: fail | error: {e}')
             status = ResponseStatus(1)
             self._client_socket.send(status.value.to_bytes(1, 'little'))
         finally:
-            print("close socket")
             self._client_socket.close()
 
     def __accept_new_connection(self):

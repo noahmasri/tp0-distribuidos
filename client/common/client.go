@@ -43,10 +43,10 @@ func (c *Client) Destroy(){
 	c.end = true
 	if c.conn != nil {
         c.conn.Close()
-		log.Infof("action: close_connection | result: success | client_id: %v",
-			c.config.ID,
-		)
     }
+	log.Infof("action: close_connection | result: success | client_id: %v",
+		c.config.ID,
+	)
 	c.betGetter.Destroy()
 }
 
@@ -79,13 +79,7 @@ func (c *Client) ShutdownGracefully(notifier chan os.Signal, done chan bool) {
 		// gets done from client channel
 		return
 	}
-	c.end = true
-	if c.conn != nil {
-        c.conn.Close()
-		log.Infof("action: close_connection | result: success | client_id: %v",
-			c.config.ID,
-		)
-    }
+	c.Destroy()
 
 	log.Infof("action: shutdown_gracefully | result: success | client_id: %v",
 		c.config.ID,
@@ -165,7 +159,7 @@ func (c *Client) EncodeBatchData(batch []Bet) ([]byte, error) {
 
 func (c *Client) MakeBet(done chan bool) {
 	defer c.Destroy()
-	acumulado := 0
+
 	for {
 		batch, err := c.betGetter.GetBatch()
         if err != nil {
@@ -174,17 +168,14 @@ func (c *Client) MakeBet(done chan bool) {
         }
 
         if len(batch) == 0 {
-			log.Infof("reached batch end")
             break
         }
 
-		e := c.createClientSocket()
-		if e != nil {
+		err = c.createClientSocket()
+		if err != nil {
 			done <- true
 			return
 		}
-
-		acumulado += len(batch)
 
 		err = c.SendBatch(batch)
 		if err != nil {
@@ -205,6 +196,5 @@ func (c *Client) MakeBet(done chan bool) {
 		c.conn = nil
 		time.Sleep(c.config.LoopPeriod)
 	}
-	log.Infof("done with %v bets", acumulado)
 	done <- true
 }
