@@ -6,7 +6,6 @@ import (
 	"bytes"
 	"os"
 	"encoding/binary"
-	"strconv"
 	"github.com/op/go-logging"
 )
 
@@ -23,17 +22,19 @@ type ClientConfig struct {
 // Client Entity that encapsulates how
 type Client struct {
 	config		ClientConfig
-	betGetter	BetGetter	
+	betGetter	BetGetter
+	agency		uint8	
 	conn		net.Conn
 	end			bool
 }
 
 // NewClient Initializes a new client receiving the configuration
 // as a parameter
-func NewClient(config ClientConfig, betGetter BetGetter) *Client {
+func NewClient(config ClientConfig, betGetter BetGetter, agency uint8) *Client {
 	client := &Client{
 		config: config,
 		betGetter: betGetter,
+		agency: agency,
 		end: false,
 	}
 	return client
@@ -117,29 +118,23 @@ func (c *Client) SendErrorMessageAndExit(done chan bool, action string, err erro
 }
 
 func (c *Client) SendBatch(batch []Bet) error{
-	data, err := c.EncodeBatchData(batch) 
-	if err != nil{
-		return err
-	}
+	data:= c.EncodeBatchData(batch) 
 
 	totalWritten := 0
 	for totalWritten < len(data) {
-		var written int
-		written, err = c.conn.Write(data[totalWritten:])
+		written, err := c.conn.Write(data[totalWritten:])
+		if err != nil {
+			return err
+		}
 		totalWritten += written
 	}
-	return err
+	return nil
 }
 
-func (c *Client) EncodeBatchData(batch []Bet) ([]byte, error) {
+func (c *Client) EncodeBatchData(batch []Bet) []byte {
 	var buffer bytes.Buffer
-	agency, err := strconv.ParseInt(c.config.ID, 10, 8)
-	if err != nil {
-		log.Fatalf("action: parse_bets | result: fail | error: %v | msg: agency number is invalid", err)
-		return buffer.Bytes(), err
-	}
-
-	binary.Write(&buffer, binary.LittleEndian, uint8(agency))
+	
+	binary.Write(&buffer, binary.LittleEndian, c.agency)
 	binary.Write(&buffer, binary.LittleEndian, BET)
 	binary.Write(&buffer, binary.LittleEndian, uint8(len(batch)))
 	for _, bet := range batch{
@@ -147,9 +142,8 @@ func (c *Client) EncodeBatchData(batch []Bet) ([]byte, error) {
 		buffer.Write(bet_bytes)
 	}
 
-	return buffer.Bytes(), nil
+	return buffer.Bytes()
 }
-
 
 func (c *Client) MakeBet(done chan bool) {
 	defer c.Destroy()

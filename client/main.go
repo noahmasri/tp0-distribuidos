@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
+	"strconv"
 	"github.com/op/go-logging"
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
@@ -113,13 +114,18 @@ func SetUpClient() (c *common.Client){
 		LoopPeriod:    v.GetDuration("loop.period"),
 	}
 
+	agency, err := strconv.ParseInt(v.GetString("id"), 10, 8)
+	if err != nil {
+		return nil
+	}
+
 	betGetter := common.NewBetGetter(v.GetString("id"), v.GetInt("batch.maxAmount"))
 	if betGetter == nil {
 		log.Criticalf("Couldn't create bet getter to get batches of bets")
 		return nil
 	}
 
-	return common.NewClient(clientConfig, *betGetter)
+	return common.NewClient(clientConfig, *betGetter, uint8(agency))
 }
 
 func main() {
