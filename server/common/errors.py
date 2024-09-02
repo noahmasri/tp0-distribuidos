@@ -13,3 +13,7 @@ class WrongHeaderError(Exception):
 class NoMessageReceivedError(Exception):
     def __init__(self, message):
         super().__init__(message)
+
+class ClientCannotSendMoreBetsError(Exception):
+    def __init__(self, message):
+        super().__init__(message)

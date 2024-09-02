@@ -5,3 +5,6 @@ class ResponseStatus(Enum):
     ERROR = 1
     BAD_REQUEST = 2
     ABORT = 3
+    LOTTERY_NOT_DONE = 4
+    SEND_WINNERS = 5
+    NO_MORE_BETS_ALLOWED = 6

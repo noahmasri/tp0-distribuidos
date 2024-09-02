@@ -3,22 +3,27 @@ import signal
 import socket
 import logging
 import time
-from typing import List, Tuple
+from typing import Tuple
 
-from common.utils import Bet, ShouldReadStreamError, store_bets
+from common.utils import Bet, ShouldReadStreamError, get_bet_documents_from_agency, get_winners, store_bets
 from common.response import ResponseStatus
-from common.errors import BetBatchError, NoMessageReceivedError, WrongHeaderError
+from common.errors import BetBatchError, ClientCannotSendMoreBetsError, NoMessageReceivedError, WrongHeaderError
 from common.request import MessageCode
 
 AGENCY_LEN=1
 BATCH_LEN=1
 MSG_CODE_LEN=1
 
+# amount of agencies required to close betting
+AGENCY_CLOSING_NUMBER=5
+
 class Server:
     def __init__(self, port, listen_backlog):
         # Initialize server socket
         self._should_stop = False
-        self._client_socket = None 
+        self._client_socket = None
+        self._agencies_done = set()
+        self._winners = None
         self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._server_socket.bind(('', port))
         self._server_socket.listen(listen_backlog)
@@ -60,14 +65,26 @@ class Server:
                     logging.info(f'action: error_exiting | result: in_progress | error: {e}')
                 break
 
-    def __obtain_all_batch_bets(self, agency: int, data: bytes) -> List[Bet]:
+    def __agency_can_send_bets(self, agency) -> bool:
         """
-        Receives all <number> of bets from stream,
+        Checks whether the agency is allowed to submit more bets.
+
+        If the agency did not send end_betting message, and the bet has not yet happened
+        (function load_bets hasnt been called), then agency can keep submitting bets.
+        """
+        return agency not in self._agencies_done and self._winners is None
+
+    def __obtain_all_batch_bets(self, agency: int, data: bytes) -> list[Bet]:
+        """
+        Receives all bets from stream,
 
         If it doesn't receive all the information it should,
         then server replies with an error, stating how many
         bets were read appropriately.
         """
+        if not self.__agency_can_send_bets(agency):
+            raise ClientCannotSendMoreBetsError("Either lottery is closed, or agency anounced he was done before")
+
         batch_num = int.from_bytes([data[0]], 'little')
         data=data[1:]
 
@@ -92,11 +109,38 @@ class Server:
         logging.info(f'action: apuesta_recibida | result: success | cantidad: {len(bets)}')
         self._client_socket.sendall(ResponseStatus.OK.value.to_bytes(1, 'little'))
 
+    def __handle_end_betting_message(self, agency: int):
+        """ 
+        Adds agency to agencies that stated they were done.
+        As adding an element to a set is idempotent, I chose to do the operation over and over again,
+        and simply keep anouncing client it was already added.
+        """
+        if agency not in self._agencies_done:
+            self._agencies_done.add(agency)
+            logging.info(f'action: finalizar_apuestas | result: success | agencia: {agency}')
+            
+            if len(self._agencies_done) == AGENCY_CLOSING_NUMBER:
+                # just got to the num of required agencies, close bet
+                self._winners = get_winners()
+
+        self._client_socket.sendall(ResponseStatus.OK.value.to_bytes(1, 'little'))
+
+    def __handle_request_winners(self, agency: int):
+        if self._winners is None:
+            self._client_socket.sendall(ResponseStatus.LOTTERY_NOT_DONE.value.to_bytes(1, 'little'))
+            return
+        winners_from_agency = get_bet_documents_from_agency(agency, self._winners)
+        print(f"winners from agency {agency}: {len(winners_from_agency)}")
+
     def __handle_message(self, code: MessageCode, agency: int, data: bytes):
         if code == MessageCode.BET:
             self.__handle_bet_batch_message(agency, data)
-        else:
-            print("unimplemented message", code)
+        elif code == MessageCode.END_BETTING:
+            print("end betting")
+            self.__handle_end_betting_message(agency)
+        elif code == MessageCode.REQUEST_WINNERS:
+            print("request winners")
+            self.__handle_request_winners(agency)
 
     """ Read agency and message code from a specific client """
     def __read_header(self) -> Tuple[MessageCode, int, bytes]:
@@ -110,12 +154,14 @@ class Server:
             agency = int.from_bytes([msg[curr]], 'little')
             curr += AGENCY_LEN
 
-            msg_code = int.from_bytes([msg[curr]], 'little')
+            msg_num = int.from_bytes([msg[curr]], 'little')
+            msg_code = MessageCode(msg_num)
             curr += MSG_CODE_LEN
-        except (IndexError, UnicodeDecodeError):
-            raise WrongHeaderError("Missing some bytes in message header")
+        except (IndexError, UnicodeDecodeError, ValueError) as e:
+            raise WrongHeaderError(f"Error parsing message header: {e}")
 
-        return MessageCode(msg_code), agency, msg[curr:]
+
+        return msg_code, agency, msg[curr:]
     
     def __handle_client_connection(self):
         """
@@ -128,16 +174,22 @@ class Server:
         try:
             msg_code, agency, data = self.__read_header()
             self.__handle_message(msg_code, agency, data)
+
         except (BetBatchError, WrongHeaderError) as e:
             # error was because either client closed connection or because he sent wrong batch information
             logging.error(f'action: receive_message | result: fail | error: {e}')
             self._client_socket.send(ResponseStatus.BAD_REQUEST.value.to_bytes(1, 'little'))
+
         except (OSError, csv.Error, NoMessageReceivedError) as e:
             if self._should_stop:
                 # client socket has already been closed somewhere else and should ignore err 
                 return
             logging.error(f'action: receive_message | result: fail | error: {e}')
             self._client_socket.send(ResponseStatus.ERROR.value.to_bytes(1, 'little'))
+        
+        except  ClientCannotSendMoreBetsError as e:
+            logging.error(f'action: receive_message | result: fail | error: {e}')
+            self._client_socket.send(ResponseStatus.NO_MORE_BETS_ALLOWED.value.to_bytes(1, 'little'))
         finally:
             self._client_socket.close()
 

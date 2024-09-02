@@ -3,8 +3,8 @@ package common
 type MessageCode uint8
 
 const (
-    BET				MessageCode = 0
-    END_BETTING		MessageCode = 1
-    REQUEST_WINNERS MessageCode = 2
+    BET	MessageCode = iota
+    END_BETTING
+    REQUEST_WINNERS
 )
 

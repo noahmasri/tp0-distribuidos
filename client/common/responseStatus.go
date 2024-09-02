@@ -3,11 +3,14 @@ package common
 type ResponseStatus uint8
 
 const (
-    OK          ResponseStatus = 0
-    ERR         ResponseStatus = 1
-    BAD_REQUEST ResponseStatus = 2
-    ABORT       ResponseStatus = 3
+    OK ResponseStatus = iota
+    ERR
+    BAD_REQUEST
+    ABORT
+    LOTTERY_NOT_DONE
+    SEND_WINNERS
 )
+
 
 func (status ResponseStatus) GetStatusProperties() (errorMsg string){
         switch status {
@@ -20,6 +23,6 @@ func (status ResponseStatus) GetStatusProperties() (errorMsg string){
         case ABORT:
         return "server aborted"
         default:
-                return "server returned unknown state"
+        return "server returned unknown state"
         }
 }
