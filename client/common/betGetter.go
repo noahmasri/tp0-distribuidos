@@ -18,6 +18,14 @@ const FileReadBytes = 4096 // arbitrarilly choose to read 4096 bytes from file e
 const LineBreak = "\r\n"
 const Separator = ","
 
+func (bg *BetGetter) Destroy(){
+    if bg.file != nil{
+        bg.file.Close()
+        bg.file = nil
+        log.Infof("action: close_file | result: success")
+    }
+}
+
 func NewBetGetter(cliId string, batchSize int) *BetGetter {
     filePath := fmt.Sprintf("/.data/agency-%s.csv", cliId)
     file, err := os.Open(filePath)
@@ -106,26 +114,4 @@ func (bg *BetGetter) GetBatch() ([]Bet, error){
     }
     bg.lastBatchSize = len(bets)
     return bets, nil
-}
-
-func (bg *BetGetter) ReadEntireFileInBatches(){
-    acumulado := 0
-	for {
-        bets, err := bg.GetBatch()
-        if err != nil {
-            fmt.Println("Error:", err)
-            break
-        }
-        if len(bets) == 0 {
-            fmt.Println("Nothing read, reached EOF")
-            break
-        }
-        
-		fmt.Printf("got %v bets from batch\n", len(bets))
-		acumulado += len(bets)
-		fmt.Printf("acumulado upto now %v\n", acumulado)
-    }
-
-	fmt.Printf("got %v bets from whole file\n", acumulado)
-
 }

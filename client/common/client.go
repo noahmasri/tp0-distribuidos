@@ -39,6 +39,17 @@ func NewClient(config ClientConfig, betGetter BetGetter) *Client {
 	return client
 }
 
+func (c *Client) Destroy(){
+	c.end = true
+	if c.conn != nil {
+        c.conn.Close()
+		log.Infof("action: close_connection | result: success | client_id: %v",
+			c.config.ID,
+		)
+    }
+	c.betGetter.Destroy()
+}
+
 // CreateClientSocket Initializes client socket. In case of
 // failure, error is printed in stdout/stderr and exit 1
 // is returned
@@ -81,21 +92,6 @@ func (c *Client) ShutdownGracefully(notifier chan os.Signal, done chan bool) {
 	)
 }
 
-func (c *Client) SendBatch() error{
-	data, err := c.EncodeBatchData() 
-	if err != nil{
-		return err
-	}
-
-	totalWritten := 0
-	for totalWritten < len(data) {
-		var written int
-		written, err = c.conn.Write(data[totalWritten:])
-		totalWritten += written
-	}
-	return err
-}
-
 func (c *Client) logStatus(status ResponseStatus){
 
 	switch status {
@@ -126,22 +122,33 @@ func (c *Client) SendErrorMessageAndExit(done chan bool, action string, err erro
 			c.config.ID,
 			err,
 		)
-		c.conn.Close()
+		if c.conn != nil {
+			c.conn.Close()
+		}
 		done <- true
 	}
 }
 
+func (c *Client) SendBatch(batch []Bet) error{
+	data, err := c.EncodeBatchData(batch) 
+	if err != nil{
+		return err
+	}
 
-func (c *Client) EncodeBatchData() ([]byte, error) {
+	totalWritten := 0
+	for totalWritten < len(data) {
+		var written int
+		written, err = c.conn.Write(data[totalWritten:])
+		totalWritten += written
+	}
+	return err
+}
+
+func (c *Client) EncodeBatchData(batch []Bet) ([]byte, error) {
 	var buffer bytes.Buffer
 	agency, err := strconv.ParseInt(c.config.ID, 10, 8)
 	if err != nil {
 		log.Fatalf("action: parse_bets | result: fail | error: %v | msg: agency number is invalid", err)
-		return buffer.Bytes(), err
-	}
-
-	batch, err := c.betGetter.GetBatch()
-	if err != nil {
 		return buffer.Bytes(), err
 	}
 
@@ -157,29 +164,47 @@ func (c *Client) EncodeBatchData() ([]byte, error) {
 
 
 func (c *Client) MakeBet(done chan bool) {
-	e := c.createClientSocket()
-	if e != nil {
-		done <- true
-		return
+	defer c.Destroy()
+	acumulado := 0
+	for {
+		batch, err := c.betGetter.GetBatch()
+        if err != nil {
+            c.SendErrorMessageAndExit(done, "get_batch", err)
+            break
+        }
+
+        if len(batch) == 0 {
+			log.Infof("reached batch end")
+            break
+        }
+
+		e := c.createClientSocket()
+		if e != nil {
+			done <- true
+			return
+		}
+
+		acumulado += len(batch)
+
+		err = c.SendBatch(batch)
+		if err != nil {
+			c.SendErrorMessageAndExit(done, "send_message", err)
+			return
+		}
+
+		buf := make([]byte, 1)
+		_, err = c.conn.Read(buf)
+		if err != nil {
+			c.SendErrorMessageAndExit(done, "receive_message", err)
+			return
+		}
+
+		c.logStatus(ResponseStatus(buf[0]))
+
+		c.conn.Close()
+		c.conn = nil
+		time.Sleep(c.config.LoopPeriod)
 	}
-
-	err := c.SendBatch()
-	if err != nil {
-		c.SendErrorMessageAndExit(done, "send_message", err)
-		return
-	}
-
-	buf := make([]byte, 1024)
-	_, err = c.conn.Read(buf)
-	if err != nil {
-		c.SendErrorMessageAndExit(done, "receive_message", err)
-		return
-	}
-
-	c.logStatus(ResponseStatus(buf[0]))
-
-	c.conn.Close()
-	c.conn = nil
-
+	log.Infof("done with %v bets", acumulado)
 	done <- true
 }

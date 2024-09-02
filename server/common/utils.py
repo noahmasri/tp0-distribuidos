@@ -47,7 +47,6 @@ class Bet:
             curr+=SURNAME_LEN
             surname = data[curr:surname_len+curr].decode()
             curr+=surname_len
-
             document=int.from_bytes(data[curr:ID_LEN+curr], 'little')
             curr+=ID_LEN
 
@@ -56,7 +55,7 @@ class Bet:
 
             number = int.from_bytes(data[curr:curr+NUMBER_LEN], 'little')
             curr+= NUMBER_LEN
-        except IndexError:
+        except (IndexError, UnicodeDecodeError):
             raise ShouldReadStreamError("Must read more bytes from the stream to keep on creating bets")
         
         if len(data) < curr:
