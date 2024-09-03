@@ -179,11 +179,6 @@ func (c *Client) MakeBets(done chan bool) error {
         if len(batch) == 0 {
             break
         }
-		
-		err = c.createClientSocket()
-		if err != nil {
-			return err
-		}
 
 		err = c.SendBatch(batch)
 		if err != nil {
@@ -198,9 +193,6 @@ func (c *Client) MakeBets(done chan bool) error {
 		
 		ResponseStatus(buf[0]).logSendBatchStatus(c.betGetter.lastBatchSize)
 
-		c.conn.Close()
-		c.conn = nil
-
 		select {
 		case <-done:
 			return errors.New("Should break: got SIGTERM")
@@ -213,12 +205,7 @@ func (c *Client) MakeBets(done chan bool) error {
 }
 
 func (c *Client) AnnounceEndBet() error {
-	err := c.createClientSocket()
-	if err != nil {
-		return err
-	}
-
-	err = c.SendEndBetting()
+	err := c.SendEndBetting()
 	if err != nil {
 		return c.SendErrorMessageAndExit("send_end_bet", err)
 	}
@@ -233,9 +220,6 @@ func (c *Client) AnnounceEndBet() error {
 		return c.SendErrorMessageAndExit("receive_end_bet_response", err)
 	}
 	ResponseStatus(buf[0]).logStatus("receive_end_bet_response")
-
-	c.conn.Close()
-	c.conn = nil
 
 	return nil
 }
@@ -278,12 +262,8 @@ func (c *Client) ParseBetWinnersResponse(attempt int) ([]uint32, bool) {
 
 func (c *Client) GetBetWinners(done chan bool) []uint32 {
 	for i := 1; i <= c.config.LoopAmount; i++ {
-		err := c.createClientSocket()
-		if err != nil {
-			return []uint32{}
-		}
 
-		err = c.SendRequestBetWinners()
+		err := c.SendRequestBetWinners()
 		if err != nil {
 			return []uint32{}
 		}
@@ -292,8 +272,6 @@ func (c *Client) GetBetWinners(done chan bool) []uint32 {
 		if !cont {
 			return winners
 		}
-		c.conn.Close()
-		c.conn = nil
 
 		select {
 		case <-done:
@@ -308,7 +286,12 @@ func (c *Client) GetBetWinners(done chan bool) []uint32 {
 }
 
 func (c *Client) ExecuteLotteryClient(done chan bool) []uint32{
-	err := c.MakeBets(done)
+	err := c.createClientSocket()
+	if err != nil {
+		return []uint32{}
+	}
+
+	err = c.MakeBets(done)
 	if err != nil {
 		return []uint32{}
 	}

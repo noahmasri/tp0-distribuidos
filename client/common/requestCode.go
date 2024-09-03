@@ -6,5 +6,5 @@ const (
     BET	MessageCode = iota
     END_BETTING
     REQUEST_WINNERS
+    END_CONNECTION
 )
-
