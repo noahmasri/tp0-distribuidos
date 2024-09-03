@@ -223,6 +223,10 @@ func (c *Client) AnnounceEndBet() error {
 		return c.SendErrorMessageAndExit("send_end_bet", err)
 	}
 
+	log.Infof("action: send_end_bet | result: success | agency: %v",
+			c.agency,
+	)
+
 	buf := make([]byte, 1)
 	_, err = c.conn.Read(buf)
 	if err != nil {
@@ -237,40 +241,57 @@ func (c *Client) AnnounceEndBet() error {
 }
 
 // returns whether it should keep asking or if it already got what it wanted
-func (c *Client) ParseBetWinnersResponse(attempt int) bool {
+func (c *Client) ParseBetWinnersResponse(attempt int) ([]uint32, bool) {
+	winners := []uint32{}
 	buf := make([]byte, 1024)
 	_, err := c.conn.Read(buf)
 	if err != nil {
-		c.SendErrorMessageAndExit("consulta_ganadores", err)
-		return false
+		c.SendErrorMessageAndExit("recibir_ganadores", err)
+		return winners, false
 	}
 
-	status := ResponseStatus(buf[0])
+	i:=0
+	status := ResponseStatus(buf[i])
+	i += 1
 	if status == LOTTERY_NOT_DONE {
 		status.logLotteryWinnersStatus(attempt)
-		return true
-	} else if ResponseStatus(buf[0]) != SEND_WINNERS{
+		return winners, true
+	} else if status != SEND_WINNERS{
 		status.logLotteryWinnersStatus(attempt)
-		return false
+		return winners, false
 	}
-	// parsear todo
-	return false 
+
+	winner_num := int(binary.LittleEndian.Uint16(buf[i:i+2]))
+	i+=2
+	log.Infof("action: consulta_ganadores | result: success | cant_ganadores: %v",
+		winner_num,
+	)
+
+	for win := 1; win <= winner_num; win++{
+		winner := binary.LittleEndian.Uint32(buf[i:i+4])
+		winners = append(winners, winner)
+		i+=4
+	}
+
+	return winners, false 
 }
 
-func (c *Client) GetBetWinners(done chan bool) error{
+func (c *Client) GetBetWinners(done chan bool) []uint32 {
 	for i := 1; i <= c.config.LoopAmount; i++ {
 		err := c.createClientSocket()
 		if err != nil {
-			return err
+			return []uint32{}
 		}
 
 		err = c.SendRequestBetWinners()
 		if err != nil {
-			return err
+			return []uint32{}
 		}
 		
-		c.ParseBetWinnersResponse(i)
-
+		winners, cont := c.ParseBetWinnersResponse(i)
+		if !cont {
+			return winners
+		}
 		c.conn.Close()
 		c.conn = nil
 
@@ -279,23 +300,21 @@ func (c *Client) GetBetWinners(done chan bool) error{
 			// if it were to continue after asking for winners, i'd recomend changing return value to
 			// return errors.New("Should break: got SIGTERM")
 			return nil
-		case <-time.After(2 * time.Second):
+		case <-time.After(5 * time.Second):
 			// continue looping	
 		}
 	}
-	return nil
+	return []uint32{}
 }
 
-func (c *Client) ExecuteLotteryClient(done chan bool) {
+func (c *Client) ExecuteLotteryClient(done chan bool) []uint32{
 	err := c.MakeBets(done)
 	if err != nil {
-		return
+		return []uint32{}
 	}
-	log.Infof("soy agency %v", c.agency)
 	err = c.AnnounceEndBet()
 	if err != nil {
-		return
+		return []uint32{}
 	}
-	log.Infof("no hubo errorcipis")
-	err = c.GetBetWinners(done)
+	return c.GetBetWinners(done)
 }

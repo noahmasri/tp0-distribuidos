@@ -115,24 +115,22 @@ class Server:
         As adding an element to a set is idempotent, I chose to do the operation over and over again,
         and simply keep anouncing client it was already added.
         """
-        print(f"agencies closed: {self._agencies_done}. just got it from agency: {agency}")
         if agency not in self._agencies_done:
             self._agencies_done.add(agency)
             logging.info(f'action: receive_end_bet | result: success | agencia: {agency}')
             if len(self._agencies_done) == AGENCY_CLOSING_NUMBER:
                 # just got to the num of required agencies, close bet
                 self._winners = get_winners()
-                print("amount of winners: ", len(self._winners))
+                logging.info("action: sorteo | result: success")
 
         self._client_socket.sendall(ResponseStatus.OK.value.to_bytes(1, 'little'))
 
     def __handle_request_winners(self, agency: int):
-        print("request winners")
         if self._winners is None:
             self._client_socket.sendall(ResponseStatus.LOTTERY_NOT_DONE.value.to_bytes(1, 'little'))
             return
         winners_from_agency = get_bet_documents_from_agency(agency, self._winners)
-        msg = ResponseStatus.OK.value.to_bytes(1, 'little') + len(winners_from_agency).to_bytes(AGENCY_WINNERS_LEN, 'little')
+        msg = ResponseStatus.SEND_WINNERS.value.to_bytes(1, 'little') + len(winners_from_agency).to_bytes(AGENCY_WINNERS_LEN, 'little')
         for winner in winners_from_agency:
             msg += int(winner).to_bytes(4, 'little')
         self._client_socket.sendall(msg)

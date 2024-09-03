@@ -48,12 +48,12 @@ func (s ResponseStatus) logSendBatchStatus(batchSize int){
 func (s ResponseStatus) logLotteryWinnersStatus(attempt int){
 	errMsg := s.GetStatusProperties()
 	if s == LOTTERY_NOT_DONE{
-		log.Infof("action: consultar_ganadores | result: fail | attempt: %v | error: %v",
+		log.Infof("action: recibir_ganadores | result: fail | attempt: %v | error: %v",
             attempt,
 			errMsg,
 		)
 	} else if errMsg != "" {
-        log.Infof("action: consultar_ganadores | result: fail | error: %v",
+        log.Infof("action: recibir_ganadores | result: fail | error: %v",
 			errMsg,
 		)
     }

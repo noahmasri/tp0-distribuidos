@@ -189,7 +189,9 @@ Para llevar a cabo lo pedido en este ejercicio, se debió agregar códigos de me
 * BET: para enviar un batch de apuesta
 * END_BETTING: para avisar que las apuestas con las que él contaba ya las mandó, por lo que no va a estar enviando nada más
 * REQUEST_WINNERS: para pedir que le envien los documentos de los DNIs ganadores de su agencia.
-Para que se puedan enviar los resultados, tal como dice la consigna se necesita que 5 agencias hayan avisado que han finalizado el envío. Es por esto que las agencias se quedan en un loop (con cantidad de iteraciones máximas loop.Amount) pidiendo los ganadores hasta que o bien reciban los ganadores, o se rindan.
+Para que se puedan enviar los resultados, tal como dice la consigna se necesita que 5 agencias hayan avisado que han finalizado el envío. Es por esto que las agencias se quedan en un loop (con cantidad de iteraciones máximas loop.Amount) pidiendo los ganadores hasta que o bien reciban los ganadores, o se rindan. Se decidió realizarlo de esta manera ya que en un servidor secuencial me resultaba extraño posponer la ejecución de una de las agencias y dejarlo en espera.
+
+A su vez, durante todo el ejercicio se mandan los distintos batches en distintas conexiones. Esto permite que la agencia pueda crearse múltiples conexiones y enviarlas en nombre de su número de agencia. Permite además que el servidor vaya tomando los pedidos de las agencias aleatoriamente y que no tenga que terminar con uno para atender a la otra.
 
 ### Cómo ejecutarlo
 Como prerrequisitos, se pide que si no se tiene un archivo compose con 5 clientes, se puede crear uno ejecutando el comando:
