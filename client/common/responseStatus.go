@@ -41,13 +41,16 @@ func (s ResponseStatus) logSendBatchStatus(batchSize int){
 	)
 }
 
-// even tho it belongs to client, it keeps it cleaner to leave it here
-func (s ResponseStatus) logEndBetsStatus(){
+// generic log status
+func (s ResponseStatus) logStatus(action string){
 	errMsg := s.GetStatusProperties()
 	if errMsg != "" {
-		log.Infof("action: receive_end_bet_response | result: fail | error: %v",
+		log.Infof("action: %v | result: fail | error: %v",
+            action,
 			errMsg,
 		)
 	}
-	log.Infof("action: receive_end_bet_response | result: success")
+	log.Infof("action: %v | result: success",
+        action,
+    )
 }

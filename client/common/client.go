@@ -228,7 +228,7 @@ func (c *Client) AnnounceEndBet() error {
 	if err != nil {
 		return c.SendErrorMessageAndExit("receive_end_bet_response", err)
 	}
-	ResponseStatus(buf[0]).logEndBetsStatus()
+	ResponseStatus(buf[0]).logStatus("receive_end_bet_response")
 
 	c.conn.Close()
 	c.conn = nil
@@ -236,13 +236,36 @@ func (c *Client) AnnounceEndBet() error {
 	return nil
 }
 
-func (c *Client) GetBetWinners() error{
+func (c *Client) GetBetWinners(done chan bool) error{
 	for msgID := 1; msgID <= c.config.LoopAmount; msgID++ {
-		err := c.SendRequestBetWinners()
+		err := c.createClientSocket()
 		if err != nil {
 			return err
 		}
 
+		err = c.SendRequestBetWinners()
+		if err != nil {
+			return err
+		}
+		buf := make([]byte, 1)
+		_, err = c.conn.Read(buf)
+		if err != nil {
+			return c.SendErrorMessageAndExit("consulta_ganadores", err)
+		}
+		// need to change it to log the amount of winners
+		ResponseStatus(buf[0]).logStatus("consulta_ganadores")
+
+		c.conn.Close()
+		c.conn = nil
+
+		select {
+		case <-done:
+			// if it were to continue after asking for winners, i'd recomend changing return value to
+			// return errors.New("Should break: got SIGTERM")
+			return nil
+		case <-time.After(2 * time.Second):
+			// continue looping	
+		}
 	}
 	return nil
 }
@@ -258,4 +281,5 @@ func (c *Client) ExecuteLotteryClient(done chan bool) {
 		return
 	}
 	log.Infof("no hubo errorcipis")
+	err = c.GetBetWinners(done)
 }

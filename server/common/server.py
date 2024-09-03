@@ -136,10 +136,8 @@ class Server:
         if code == MessageCode.BET:
             self.__handle_bet_batch_message(agency, data)
         elif code == MessageCode.END_BETTING:
-            print("end betting")
             self.__handle_end_betting_message(agency)
         elif code == MessageCode.REQUEST_WINNERS:
-            print("request winners")
             self.__handle_request_winners(agency)
 
     """ Read agency and message code from a specific client """
