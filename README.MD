@@ -184,6 +184,26 @@ Además, se debe asegurar de contar con un archivo de data con la siguiente ruta
 Teniendo la carpeta de data en la ruta al repositorio, y siendo el id del cliente el que se puede hallar en el compose como environment: CLI_ID.
 Para ejecutarlo luego de estos requisitos se debe seguir los mismos pasos que en el ejercicio 5.
 
+## Ejercicio 7
+Para llevar a cabo lo pedido en este ejercicio, se debió agregar códigos de mensaje a los paquetes enviados por el cliente, y nuevos códigos de respuesta al servidor. Ahora el cliente cuenta con 3 mensajes:
+* BET: para enviar un batch de apuesta
+* END_BETTING: para avisar que las apuestas con las que él contaba ya las mandó, por lo que no va a estar enviando nada más
+* REQUEST_WINNERS: para pedir que le envien los documentos de los DNIs ganadores de su agencia.
+Para que se puedan enviar los resultados, tal como dice la consigna se necesita que 5 agencias hayan avisado que han finalizado el envío. Es por esto que las agencias se quedan en un loop (con cantidad de iteraciones máximas loop.Amount) pidiendo los ganadores hasta que o bien reciban los ganadores, o se rindan.
+
+### Cómo ejecutarlo
+Como prerrequisitos, se pide que si no se tiene un archivo compose con 5 clientes, se puede crear uno ejecutando el comando:
+
+```bash
+./generar-compose.sh docker-compose-dev.yaml 5
+```
+Además, se debe asegurar de contar con una carpeta de data con las siguientes rutas:
+```bash
+/.data/agency-<id cliente n>.csv
+```
+con 1 <= n <= 5, teniendo la carpeta de data en la ruta al repositorio, y siendo el id del cliente el que se puede hallar en el compose como environment: CLI_ID.
+Para ejecutarlo luego de estos requisitos se debe seguir los mismos pasos que en el ejercicio 5. 
+
 # Referencias
 [1] 
 [Instalar netcat en contenedor](https://stackoverflow.com/questions/52570028/i-am-unable-to-execute-netcat-command-within-docker-bash-terminal)
