@@ -91,7 +91,8 @@ func (c *Client) ShutdownGracefully(notifier chan os.Signal, done chan bool) {
 	)
 }
 
-func (c *Client) logStatus(status ResponseStatus, action string){
+// extra goes in case you want to add more information that what is provided by default
+func (c *Client) logSendBetStatus(status ResponseStatus, action string, extra string){
 	errMsg := status.GetStatusProperties()
 	if errMsg != "" {
 		log.Infof("action: %v | result: fail | cantidad: %v | error: %v",
@@ -106,7 +107,7 @@ func (c *Client) logStatus(status ResponseStatus, action string){
 	)
 }
 
-func (c *Client) SendErrorMessageAndExit(done chan bool, action string, err error) error{
+func (c *Client) SendErrorMessageAndExit(action string, err error) error {
 	// only log error message if it wasnt because got an exception
 	if !c.end {
 		log.Errorf("action: %v | result: fail | client_id: %v | error: %v",
@@ -156,13 +157,23 @@ func (c *Client) SendEndBetting() error {
 	return c.SendAll(buffer.Bytes())
 }
 
+func (c *Client) SendRequestBetWinners() error {
+	var buffer bytes.Buffer
+	
+	binary.Write(&buffer, binary.LittleEndian, c.agency)
+	binary.Write(&buffer, binary.LittleEndian, REQUEST_WINNERS)
+
+	return c.SendAll(buffer.Bytes())
+}
+
+
 func (c *Client) MakeBets(done chan bool) error {
 	defer c.Destroy()
 
 	for {
 		batch, err := c.betGetter.GetBatch()
         if err != nil {
-            return c.SendErrorMessageAndExit(done, "get_batch", err)
+            return c.SendErrorMessageAndExit("get_batch", err)
         }
 
         if len(batch) == 0 {
@@ -176,16 +187,16 @@ func (c *Client) MakeBets(done chan bool) error {
 
 		err = c.SendBatch(batch)
 		if err != nil {
-			return c.SendErrorMessageAndExit(done, "send_message", err)
+			return c.SendErrorMessageAndExit("send_message", err)
 		}
 
 		buf := make([]byte, 1)
 		_, err = c.conn.Read(buf)
 		if err != nil {
-			return c.SendErrorMessageAndExit(done, "receive_message", err)
+			return c.SendErrorMessageAndExit("receive_message", err)
 		}
-
-		c.logStatus(ResponseStatus(buf[0]), "apuesta_enviada")
+		
+		ResponseStatus(buf[0]).logSendBatchStatus(c.betGetter.lastBatchSize)
 
 		c.conn.Close()
 		c.conn = nil
@@ -201,32 +212,50 @@ func (c *Client) MakeBets(done chan bool) error {
 	return nil
 }
 
+func (c *Client) AnnounceEndBet() error {
+	err := c.createClientSocket()
+	if err != nil {
+		return err
+	}
+
+	err = c.SendEndBetting()
+	if err != nil {
+		return c.SendErrorMessageAndExit("send_end_bet", err)
+	}
+
+	buf := make([]byte, 1)
+	_, err = c.conn.Read(buf)
+	if err != nil {
+		return c.SendErrorMessageAndExit("receive_end_bet_response", err)
+	}
+	ResponseStatus(buf[0]).logEndBetsStatus()
+
+	c.conn.Close()
+	c.conn = nil
+
+	return nil
+}
+
+func (c *Client) GetBetWinners() error{
+	for msgID := 1; msgID <= c.config.LoopAmount; msgID++ {
+		err := c.SendRequestBetWinners()
+		if err != nil {
+			return err
+		}
+
+	}
+	return nil
+}
+
 func (c *Client) ExecuteLotteryClient(done chan bool) {
 	err := c.MakeBets(done)
 	if err != nil {
 		return
 	}
 
-	err = c.createClientSocket()
+	err = c.AnnounceEndBet()
 	if err != nil {
 		return
 	}
-
-	err = c.SendEndBetting()
-	if err != nil {
-		c.SendErrorMessageAndExit(done, "send_end_betting_message", err)
-		return
-	}
-
-	buf := make([]byte, 1)
-	_, err = c.conn.Read(buf)
-	if err != nil {
-		c.SendErrorMessageAndExit(done, "receive_end_bet_response", err)
-		return
-	}
-
-	c.logStatus(ResponseStatus(buf[0]), "receive_end_bet_response")
-	c.conn.Close()
-	c.conn = nil
-
+	log.Infof("no hubo errorcipis")
 }

@@ -117,7 +117,7 @@ class Server:
         """
         if agency not in self._agencies_done:
             self._agencies_done.add(agency)
-            logging.info(f'action: finalizar_apuestas | result: success | agencia: {agency}')
+            logging.info(f'action: receive_end_bet | result: success | agencia: {agency}')
             
             if len(self._agencies_done) == AGENCY_CLOSING_NUMBER:
                 # just got to the num of required agencies, close bet
