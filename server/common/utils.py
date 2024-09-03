@@ -76,11 +76,11 @@ class Bet:
 def has_won(bet: Bet) -> bool:
     return bet.number == LOTTERY_WINNER_NUMBER
 
-def get_bet_documents_from_agency(agency: int, all_bets: list[Bet]) -> map:
+def get_bet_documents_from_agency(agency: int, all_bets: list[Bet]) -> list[int]:
     return list(map(lambda bet: bet.document, filter(lambda bet: bet.is_from_agency(agency), all_bets)))
 
 def get_winners() -> list[Bet]:
-    return list(filter(has_won, load_bets()))
+    wins = list(filter(has_won, load_bets()))
 
 """
 Persist the information of each bet in the STORAGE_FILEPATH file.

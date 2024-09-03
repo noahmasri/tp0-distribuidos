@@ -291,7 +291,7 @@ func (c *Client) ExecuteLotteryClient(done chan bool) {
 	if err != nil {
 		return
 	}
-
+	log.Infof("soy agency %v", c.agency)
 	err = c.AnnounceEndBet()
 	if err != nil {
 		return

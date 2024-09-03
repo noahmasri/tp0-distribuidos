@@ -13,7 +13,7 @@ from common.request import MessageCode
 AGENCY_LEN=1
 BATCH_LEN=1
 MSG_CODE_LEN=1
-
+AGENCY_WINNERS_LEN=2
 # amount of agencies required to close betting
 AGENCY_CLOSING_NUMBER=5
 
@@ -115,13 +115,14 @@ class Server:
         As adding an element to a set is idempotent, I chose to do the operation over and over again,
         and simply keep anouncing client it was already added.
         """
+        print(f"agencies closed: {self._agencies_done}. just got it from agency: {agency}")
         if agency not in self._agencies_done:
             self._agencies_done.add(agency)
             logging.info(f'action: receive_end_bet | result: success | agencia: {agency}')
-            
             if len(self._agencies_done) == AGENCY_CLOSING_NUMBER:
                 # just got to the num of required agencies, close bet
                 self._winners = get_winners()
+                print("amount of winners: ", len(self._winners))
 
         self._client_socket.sendall(ResponseStatus.OK.value.to_bytes(1, 'little'))
 
@@ -131,7 +132,10 @@ class Server:
             self._client_socket.sendall(ResponseStatus.LOTTERY_NOT_DONE.value.to_bytes(1, 'little'))
             return
         winners_from_agency = get_bet_documents_from_agency(agency, self._winners)
-        print(f"winners from agency {agency}: {len(winners_from_agency)}")
+        msg = ResponseStatus.OK.value.to_bytes(1, 'little') + len(winners_from_agency).to_bytes(AGENCY_WINNERS_LEN, 'little')
+        for winner in winners_from_agency:
+            msg += int(winner).to_bytes(4, 'little')
+        self._client_socket.sendall(msg)
 
     def __handle_message(self, code: MessageCode, agency: int, data: bytes):
         if code == MessageCode.BET:
