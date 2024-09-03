@@ -45,6 +45,11 @@ func (c *Client) Destroy(){
 	if !c.end{
 		c.end = true
 		if c.conn != nil {
+			if err:=c.SendSimpleMessage(END_CONNECTION); err == nil{
+				log.Infof("action: send_exit | result: success | client_id: %v",
+					c.config.ID,
+				)
+			}
 			c.conn.Close()
 		}
 		log.Infof("action: close_connection | result: success | client_id: %v",
@@ -108,17 +113,17 @@ func (c *Client) logSendBetStatus(status ResponseStatus, action string, extra st
 }
 
 func (c *Client) SendErrorMessageAndExit(action string, err error) error {
-	// only log error message if it wasnt because got an exception
-	if !c.end {
-		log.Errorf("action: %v | result: fail | client_id: %v | error: %v",
-			action,
-			c.config.ID,
-			err,
-		)
-		if c.conn != nil {
-			c.conn.Close()
-		}
+	// socket failed because goroutine closed it
+	if c.end {
+		return nil
 	}
+
+	log.Errorf("action: %v | result: fail | client_id: %v | error: %v",
+		action,
+		c.config.ID,
+		err,
+	)
+	c.Destroy()
 	return err
 }
 
@@ -148,27 +153,16 @@ func (c *Client) SendBatch(batch []Bet) error{
 	return c.SendAll(buffer.Bytes())
 }
 
-func (c *Client) SendEndBetting() error {
+func (c *Client) SendSimpleMessage(mc MessageCode) error {
 	var buffer bytes.Buffer
 	
 	binary.Write(&buffer, binary.LittleEndian, c.agency)
-	binary.Write(&buffer, binary.LittleEndian, END_BETTING)
+	binary.Write(&buffer, binary.LittleEndian, mc)
 
 	return c.SendAll(buffer.Bytes())
 }
-
-func (c *Client) SendRequestBetWinners() error {
-	var buffer bytes.Buffer
-	
-	binary.Write(&buffer, binary.LittleEndian, c.agency)
-	binary.Write(&buffer, binary.LittleEndian, REQUEST_WINNERS)
-
-	return c.SendAll(buffer.Bytes())
-}
-
 
 func (c *Client) MakeBets(done chan bool) error {
-	defer c.Destroy()
 
 	for {
 		batch, err := c.betGetter.GetBatch()
@@ -205,7 +199,7 @@ func (c *Client) MakeBets(done chan bool) error {
 }
 
 func (c *Client) AnnounceEndBet() error {
-	err := c.SendEndBetting()
+	err := c.SendSimpleMessage(END_BETTING)
 	if err != nil {
 		return c.SendErrorMessageAndExit("send_end_bet", err)
 	}
@@ -263,7 +257,7 @@ func (c *Client) ParseBetWinnersResponse(attempt int) ([]uint32, bool) {
 func (c *Client) GetBetWinners(done chan bool) []uint32 {
 	for i := 1; i <= c.config.LoopAmount; i++ {
 
-		err := c.SendRequestBetWinners()
+		err := c.SendSimpleMessage(REQUEST_WINNERS) 
 		if err != nil {
 			return []uint32{}
 		}
@@ -278,7 +272,7 @@ func (c *Client) GetBetWinners(done chan bool) []uint32 {
 			// if it were to continue after asking for winners, i'd recomend changing return value to
 			// return errors.New("Should break: got SIGTERM")
 			return nil
-		case <-time.After(5 * time.Second):
+		case <-time.After(1 * time.Second):
 			// continue looping	
 		}
 	}
@@ -286,6 +280,8 @@ func (c *Client) GetBetWinners(done chan bool) []uint32 {
 }
 
 func (c *Client) ExecuteLotteryClient(done chan bool) []uint32{
+	defer c.Destroy()
+	
 	err := c.createClientSocket()
 	if err != nil {
 		return []uint32{}
@@ -299,5 +295,6 @@ func (c *Client) ExecuteLotteryClient(done chan bool) []uint32{
 	if err != nil {
 		return []uint32{}
 	}
+
 	return c.GetBetWinners(done)
 }

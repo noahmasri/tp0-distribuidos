@@ -5,3 +5,4 @@ class MessageCode(Enum):
     BET = 0
     END_BETTING = 1
     REQUEST_WINNERS = 2
+    END_CONNECTION = 3
