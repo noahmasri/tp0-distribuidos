@@ -236,8 +236,29 @@ func (c *Client) AnnounceEndBet() error {
 	return nil
 }
 
+// returns whether it should keep asking or if it already got what it wanted
+func (c *Client) ParseBetWinnersResponse(attempt int) bool {
+	buf := make([]byte, 1024)
+	_, err := c.conn.Read(buf)
+	if err != nil {
+		c.SendErrorMessageAndExit("consulta_ganadores", err)
+		return false
+	}
+
+	status := ResponseStatus(buf[0])
+	if status == LOTTERY_NOT_DONE {
+		status.logLotteryWinnersStatus(attempt)
+		return true
+	} else if ResponseStatus(buf[0]) != SEND_WINNERS{
+		status.logLotteryWinnersStatus(attempt)
+		return false
+	}
+	// parsear todo
+	return false 
+}
+
 func (c *Client) GetBetWinners(done chan bool) error{
-	for msgID := 1; msgID <= c.config.LoopAmount; msgID++ {
+	for i := 1; i <= c.config.LoopAmount; i++ {
 		err := c.createClientSocket()
 		if err != nil {
 			return err
@@ -247,13 +268,8 @@ func (c *Client) GetBetWinners(done chan bool) error{
 		if err != nil {
 			return err
 		}
-		buf := make([]byte, 1)
-		_, err = c.conn.Read(buf)
-		if err != nil {
-			return c.SendErrorMessageAndExit("consulta_ganadores", err)
-		}
-		// need to change it to log the amount of winners
-		ResponseStatus(buf[0]).logStatus("consulta_ganadores")
+		
+		c.ParseBetWinnersResponse(i)
 
 		c.conn.Close()
 		c.conn = nil

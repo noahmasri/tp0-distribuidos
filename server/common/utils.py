@@ -68,7 +68,7 @@ class Bet:
         return (f"Bet(agency={self.agency}, first name={self.first_name}, last name={self.last_name}, "
                 f"document={self.document}, birthdate={self.birthdate}, number={self.number})")
 
-    def __is_from_agency(self, agency: int):
+    def is_from_agency(self, agency: int):
         return self.agency == agency
     
 
@@ -77,7 +77,7 @@ def has_won(bet: Bet) -> bool:
     return bet.number == LOTTERY_WINNER_NUMBER
 
 def get_bet_documents_from_agency(agency: int, all_bets: list[Bet]) -> map:
-    return list(map(lambda bet: bet.document, filter(lambda bet: bet.__is_from_agency(agency), all_bets)))
+    return list(map(lambda bet: bet.document, filter(lambda bet: bet.is_from_agency(agency), all_bets)))
 
 def get_winners() -> list[Bet]:
     return list(filter(has_won, load_bets()))

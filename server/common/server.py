@@ -126,6 +126,7 @@ class Server:
         self._client_socket.sendall(ResponseStatus.OK.value.to_bytes(1, 'little'))
 
     def __handle_request_winners(self, agency: int):
+        print("request winners")
         if self._winners is None:
             self._client_socket.sendall(ResponseStatus.LOTTERY_NOT_DONE.value.to_bytes(1, 'little'))
             return

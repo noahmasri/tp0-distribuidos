@@ -14,16 +14,20 @@ const (
 
 func (status ResponseStatus) GetStatusProperties() (errorMsg string){
         switch status {
-        case OK:
-        return ""
+        case OK, SEND_WINNERS:
+            return ""
         case ERR:
-        return "bet batch was not stores correctly by server"
+            return "bet batch was not stores correctly by server"
         case BAD_REQUEST:
-        return "bet batch was not sent appropriately. either there was data missing, or the batch amount was parsed incorrectly"
+            return "bet batch was not sent appropriately. either there was data missing, or the batch amount was parsed incorrectly"
         case ABORT:
-        return "server aborted"
+            return "server aborted"
+        case LOTTERY_NOT_DONE:
+            return "server waiting for clients to end"
+        case NO_MORE_BETS_ALLOWED:
+            return "cannot send any more bets, since already stated we were done betting"
         default:
-        return "server returned unknown state"
+            return "server returned unknown state"
         }
 }
 
@@ -39,6 +43,20 @@ func (s ResponseStatus) logSendBatchStatus(batchSize int){
 	log.Infof("action: apuesta_enviada | result: success | cantidad: %v",
 		batchSize,
 	)
+}
+
+func (s ResponseStatus) logLotteryWinnersStatus(attempt int){
+	errMsg := s.GetStatusProperties()
+	if s == LOTTERY_NOT_DONE{
+		log.Infof("action: consultar_ganadores | result: fail | attempt: %v | error: %v",
+            attempt,
+			errMsg,
+		)
+	} else if errMsg != "" {
+        log.Infof("action: consultar_ganadores | result: fail | error: %v",
+			errMsg,
+		)
+    }
 }
 
 // generic log status
