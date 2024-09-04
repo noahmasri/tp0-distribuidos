@@ -45,7 +45,7 @@ func (c *Client) Destroy(){
 	if !c.end{
 		c.end = true
 		if c.conn != nil {
-			if err:=c.SendSimpleMessage(END_CONNECTION); err == nil{
+			if err:=c.SendSimpleMessage(END_CONNECTION); err == nil {
 				log.Infof("action: send_exit | result: success | client_id: %v",
 					c.config.ID,
 				)

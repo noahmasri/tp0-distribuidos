@@ -208,15 +208,21 @@ Para ejecutarlo luego de estos requisitos se debe seguir los mismos pasos que en
 
 # Parte 3
 ## Ejercicio 8
-Para este último ejercicio, en donde se requería la conversión de nuestro servidor secuencial a una solución en donde se puedan tomar multiples clientes, se desarrolló una solución sencilla haciendo uso de una thread pool con 5 hilos, tal como la cantidad de agencias. La idea es que cada hilo se mappee a un cliente en particular y lleve el rastro de este hasta su finalización. La razón por la que se hace uso de una thread pool y no se lanzan hilos ante la llegadas de cliente es para hacer el servidor más estable, y que eventualmente si se desea tener más clientes no se deba lanzar un hilo por cada uno, y además para dificultar la posibilidad de un ataque de DoS. Para poder sincronizar estos procesos se hace uso principalmente de dos herramientas.
+Para este último ejercicio, en donde se requería la conversión de nuestro servidor secuencial a una solución en donde se puedan tomar multiples clientes, se desarrolló una solución sencilla haciendo uso de una thread pool con 5 hilos, tal como la cantidad de agencias. La idea es que cada hilo se mappee a un cliente en particular y lleve el rastro de este hasta su finalización. La razón por la que se hace uso de una thread pool y no se lanzan hilos ante la llegadas de cliente es para hacer el servidor más estable, y que eventualmente si se desea tener más clientes no se deba lanzar un hilo por cada uno, y además para dificultar la posibilidad de un ataque de DoS.
 
+Para ejecutar tareas en la ThreadPool existen dos métodos:
+* apply
+* apply_async
+Se decidió trabajar con el segundo ya que el primero espera a que la función retorne para correr otra tarea, lo cual para este problema no sirve, pues nos otorga en definitiva procesamiento secuencial.
+
+Para poder sincronizar estos procesos se hace uso principalmente de dos herramientas.
 #### Una variable de condición 
 Esta se usa para llevar registro de las agencias que han finalizado. Al recibir un mensaje de finalización de apuestas, el servidor almacena en el set de agencias a esta. Se eligió un set y no un contador para que de igual cuántas veces la misma agencia diga que ha finalizado, se tomará solo la primera vez. Una vez recibido este mensaje, si la agencia no estaba siendo trackeada como parte de las finalizadas, entonces habiendo tomado esta condvar, se la agrega al set y revisa si llegó a 5. Si llegó a 5, entonces "despierta" (notify all) a todos los procesos que se encontraban a la espera de que las otras agencias cierren. Caso contrario, simplemente sigue con su procesamiento.
 
 Cuando una agencia pide al servidor los ganadores que apostaron en su agencia, el hilo de este toma la variable de condición (que tiene un lock asociado internamente) y revisa si las 5 agencias ya mandaron los resultados. En caso de que esto no sea así, entonces se "duerme" haciendo un wait, hasta que se realice el notify all por parte de otro hilo.   
 
 #### Lock
-Este se usa para proteger el archivo de apuestas, tanto para escritura como para lectura. Esto implica que se debe tomar el lock antes de llamar a las funciones `store_bets` y `load_bets` (get_winners). 
+Este se usa para proteger el archivo de apuestas, tanto para escritura como para lectura. Esto implica que se debe tomar el lock antes de llamar a las funciones `store_bets` y `load_bets` (get_winners). Este lock a su vez protege a la variable asociada al archivo: `winners`. La idea es que, en lugar de que cada uno de los hilos cargue el archivo en memoria, procese a los ganadores y tenga su propia variable local con estos, que busque cada vez que un cliente se lo pide, que ya sea parte de lo que es el servidor, y que el primero que llegue tras el notify_all sea quien va a cargar todos los registros a memoria. Cuando el resto quiera buscar los ganadores, si ya esta variable está setteada entonces simplemente la usará para buscar las agencias ganadoras y guardarselas en una variable temporal. Es importante destacar que la variable winners no se debe usar fuera de la sección crítica, por lo que se la copia para guardar los ganadores de cada agencia y no se la use directamente, ni aunque sea para solo lectura.   
 
 # Referencias
 [1] 

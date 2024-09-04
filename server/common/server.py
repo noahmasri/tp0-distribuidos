@@ -23,11 +23,15 @@ class Server:
     def __init__(self, port, listen_backlog):
         # Initialize server socket
         self._should_stop = False
+
         self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._server_socket.bind(('', port))
         self._server_socket.listen(listen_backlog)
+
         self._agencies_done = set()
         self._agencies_convar = multiprocessing.Condition()
+
+        self.winners = None
         self.file_lock = multiprocessing.Lock()
 
     def __shutdown_gracefully(self, signum, frame):
@@ -89,7 +93,8 @@ class Server:
                 # Leer más datos del socket si ocurre un error de deserialización
                 msg = client_socket.recv(1024)
                 if not msg:
-                    raise BetBatchError("There was an error parsing bet batch: couldnt get all required bets")
+                    logging.info(f'action: apuesta_recibida | result: fail | cantidad: {len(bets)}')
+                    raise BetBatchError("There was an error parsing bet batch: couldn't get all required bets")
                 data += msg  # Concatenar los datos recibidos al buffer existente
                 
         return bets
@@ -126,9 +131,10 @@ class Server:
                 self._agencies_convar.wait()
 
         with self.file_lock: 
-            winners = get_winners()
+            if self.winners is None:
+                self.winners = get_winners()
+            winners_from_agency = get_bet_documents_from_agency(agency, self.winners)
 
-        winners_from_agency = get_bet_documents_from_agency(agency, winners)
         msg = ResponseStatus.SEND_WINNERS.value.to_bytes(1, 'little') + len(winners_from_agency).to_bytes(AGENCY_WINNERS_LEN, 'little')
         for winner in winners_from_agency:
             msg += int(winner).to_bytes(4, 'little')
