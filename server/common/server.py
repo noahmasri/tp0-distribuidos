@@ -26,10 +26,8 @@ class Server:
         self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._server_socket.bind(('', port))
         self._server_socket.listen(listen_backlog)
-
         self._agencies_done = set()
         self._agencies_convar = multiprocessing.Condition()
-
         self.file_lock = multiprocessing.Lock()
 
     def __shutdown_gracefully(self, signum, frame):
@@ -194,7 +192,6 @@ class Server:
                 self.__handle_message(client_socket, msg_code, agency, data)
             except (BetBatchError, WrongHeaderError) as e:
                 # error was because either client closed connection or because he sent wrong batch information
-                logging.error(f'action: receive_message | result: fail | error: {e}')
                 self.__announce_error_with_code(ResponseStatus.BAD_REQUEST, e)
                 break
             except (OSError, csv.Error, NoMessageReceivedError) as e:

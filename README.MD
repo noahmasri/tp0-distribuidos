@@ -206,6 +206,18 @@ Además, se debe asegurar de contar con una carpeta de data con las siguientes r
 con 1 <= n <= 5, teniendo la carpeta de data en la ruta al repositorio, y siendo el id del cliente el que se puede hallar en el compose como environment: CLI_ID.
 Para ejecutarlo luego de estos requisitos se debe seguir los mismos pasos que en el ejercicio 5. 
 
+# Parte 3
+## Ejercicio 8
+Para este último ejercicio, en donde se requería la conversión de nuestro servidor secuencial a una solución en donde se puedan tomar multiples clientes, se desarrolló una solución sencilla haciendo uso de una thread pool con 5 hilos, tal como la cantidad de agencias. La idea es que cada hilo se mappee a un cliente en particular y lleve el rastro de este hasta su finalización. La razón por la que se hace uso de una thread pool y no se lanzan hilos ante la llegadas de cliente es para hacer el servidor más estable, y que eventualmente si se desea tener más clientes no se deba lanzar un hilo por cada uno, y además para dificultar la posibilidad de un ataque de DoS. Para poder sincronizar estos procesos se hace uso principalmente de dos herramientas.
+
+#### Una variable de condición 
+Esta se usa para llevar registro de las agencias que han finalizado. Al recibir un mensaje de finalización de apuestas, el servidor almacena en el set de agencias a esta. Se eligió un set y no un contador para que de igual cuántas veces la misma agencia diga que ha finalizado, se tomará solo la primera vez. Una vez recibido este mensaje, si la agencia no estaba siendo trackeada como parte de las finalizadas, entonces habiendo tomado esta condvar, se la agrega al set y revisa si llegó a 5. Si llegó a 5, entonces "despierta" (notify all) a todos los procesos que se encontraban a la espera de que las otras agencias cierren. Caso contrario, simplemente sigue con su procesamiento.
+
+Cuando una agencia pide al servidor los ganadores que apostaron en su agencia, el hilo de este toma la variable de condición (que tiene un lock asociado internamente) y revisa si las 5 agencias ya mandaron los resultados. En caso de que esto no sea así, entonces se "duerme" haciendo un wait, hasta que se realice el notify all por parte de otro hilo.   
+
+#### Lock
+Este se usa para proteger el archivo de apuestas, tanto para escritura como para lectura. Esto implica que se debe tomar el lock antes de llamar a las funciones `store_bets` y `load_bets` (get_winners). 
+
 # Referencias
 [1] 
 [Instalar netcat en contenedor](https://stackoverflow.com/questions/52570028/i-am-unable-to-execute-netcat-command-within-docker-bash-terminal)
