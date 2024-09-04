@@ -86,16 +86,14 @@ class Server:
         bets=[]
         while len(bets) < batch_num:
             try:
-                # Intentar deserializar una apuesta
                 bet, data = Bet.deserialize(agency, data)
                 bets.append(bet)
             except ShouldReadStreamError:
-                # Leer más datos del socket si ocurre un error de deserialización
                 msg = client_socket.recv(1024)
                 if not msg:
                     logging.info(f'action: apuesta_recibida | result: fail | cantidad: {len(bets)}')
                     raise BetBatchError("There was an error parsing bet batch: couldn't get all required bets")
-                data += msg  # Concatenar los datos recibidos al buffer existente
+                data += msg 
                 
         return bets
     
@@ -204,8 +202,8 @@ class Server:
                 self.__announce_error_with_code(ResponseStatus.ERROR, e)
                 break
             except ClientCannotSendMoreBetsError as e:
-                # give client the chance to redeem himself
                 self.__announce_error_with_code(ResponseStatus.NO_MORE_BETS_ALLOWED, e)
+                break
 
         logging.info('action: close_connection | result: success')
         client_socket.close()
