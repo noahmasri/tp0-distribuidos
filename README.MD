@@ -233,3 +233,6 @@ Para ejecutarlo luego de estos requisitos se debe seguir los mismos pasos que en
 
 [9]
 [Slicing en python](https://stackoverflow.com/questions/9490058/why-does-substring-slicing-with-index-out-of-range-work)
+
+[10]
+[Multiprocessing library python](https://docs.python.org/3/library/multiprocessing.html)
