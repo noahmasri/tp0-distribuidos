@@ -91,22 +91,6 @@ func (c *Client) ShutdownGracefully(notifier chan os.Signal, done chan bool) {
 	)
 }
 
-// extra goes in case you want to add more information that what is provided by default
-func (c *Client) logSendBetStatus(status ResponseStatus, action string, extra string){
-	errMsg := status.GetStatusProperties()
-	if errMsg != "" {
-		log.Infof("action: %v | result: fail | cantidad: %v | error: %v",
-			action,
-			c.betGetter.lastBatchSize,
-			errMsg,
-		)
-	}
-	log.Infof("action: %v | result: success | cantidad: %v",
-		action,
-		c.betGetter.lastBatchSize,
-	)
-}
-
 func (c *Client) SendErrorMessageAndExit(action string, err error) error {
 	// only log error message if it wasnt because got an exception
 	if !c.end {
@@ -168,7 +152,6 @@ func (c *Client) SendRequestBetWinners() error {
 
 
 func (c *Client) MakeBets(done chan bool) error {
-	defer c.Destroy()
 
 	for {
 		batch, err := c.betGetter.GetBatch()
@@ -308,6 +291,7 @@ func (c *Client) GetBetWinners(done chan bool) []uint32 {
 }
 
 func (c *Client) ExecuteLotteryClient(done chan bool) []uint32{
+	defer c.Destroy()
 	err := c.MakeBets(done)
 	if err != nil {
 		return []uint32{}
