@@ -3,11 +3,11 @@ import signal
 import socket
 import logging
 import multiprocessing
+import common.errors as err
 from multiprocessing.pool import ThreadPool
 from typing import Tuple
 from common.utils import Bet, ShouldReadStreamError, get_bet_documents_from_agency, get_winners, store_bets
 from common.response import ResponseStatus
-from common.errors import BetBatchError, ClientCannotSendMoreBetsError, NoMessageReceivedError, WrongHeaderError
 from common.request import MessageCode
 
 MAX_PROCESSES=5
@@ -78,7 +78,7 @@ class Server:
         """
         with self._agencies_convar:
             if agency in self._agencies_done:
-                raise ClientCannotSendMoreBetsError("Either lottery is closed, or agency anounced he was done before")
+                raise err.ClientCannotSendMoreBetsError("Either lottery is closed, or agency anounced he was done before")
 
         batch_num = int.from_bytes([data[0]], 'little')
         data=data[1:]
@@ -92,7 +92,7 @@ class Server:
                 msg = client_socket.recv(1024)
                 if not msg:
                     logging.info(f'action: apuesta_recibida | result: fail | cantidad: {len(bets)}')
-                    raise BetBatchError("There was an error parsing bet batch: couldn't get all required bets")
+                    raise err.BetBatchError("There was an error parsing bet batch: couldn't get all required bets")
                 data += msg 
                 
         return bets
@@ -124,6 +124,8 @@ class Server:
 
     def __handle_request_winners(self, client_socket: socket.socket, agency: int):
         with self._agencies_convar:
+            if agency not in self._agencies_done:
+                raise err.ClientCannotAskForResultsWhenNotDone("Asking for winners is forbidden until you finish betting")
             while len(self._agencies_done) < AGENCY_CLOSING_NUMBER:
                 logging.info(f'action: wait_agencies | result: in_progress | agencia: {agency}')
                 self._agencies_convar.wait()
@@ -155,7 +157,7 @@ class Server:
         # read as much as i can to avoid too many reads
         msg = client_socket.recv(1024)
         if not msg:
-            raise NoMessageReceivedError("No message was received from socket: client probably ended connection before sending anything")
+            raise err.NoMessageReceivedError("No message was received from socket: client probably ended connection before sending anything")
         
         try:
             agency = int.from_bytes([msg[curr]], 'little')
@@ -165,7 +167,7 @@ class Server:
             msg_code = MessageCode(msg_num)
             curr += MSG_CODE_LEN
         except (IndexError, UnicodeDecodeError, ValueError) as e:
-            raise WrongHeaderError(f"Error parsing message header: {e}")
+            raise err.WrongHeaderError(f"Error parsing message header: {e}")
 
 
         return msg_code, agency, msg[curr:]
@@ -194,14 +196,17 @@ class Server:
                 if msg_code == MessageCode.END_CONNECTION:
                     break
                 self.__handle_message(client_socket, msg_code, agency, data)
-            except (BetBatchError, WrongHeaderError) as e:
-                # error was because either client closed connection or because he sent wrong batch information
+            except (err.BetBatchError, err.WrongHeaderError, err.ClientCannotAskForResultsWhenNotDone) as e:
+                # error was because either 
+                # - client closed connection
+                # - sent wrong batch information
+                # - asked for results when he was not over
                 self.__announce_error_with_code(ResponseStatus.BAD_REQUEST, e)
                 break
-            except (OSError, csv.Error, NoMessageReceivedError) as e:
+            except (OSError, csv.Error, err.NoMessageReceivedError) as e:
                 self.__announce_error_with_code(ResponseStatus.ERROR, e)
                 break
-            except ClientCannotSendMoreBetsError as e:
+            except err.ClientCannotSendMoreBetsError as e:
                 self.__announce_error_with_code(ResponseStatus.NO_MORE_BETS_ALLOWED, e)
                 break
 

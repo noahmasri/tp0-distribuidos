@@ -17,3 +17,7 @@ class NoMessageReceivedError(Exception):
 class ClientCannotSendMoreBetsError(Exception):
     def __init__(self, message):
         super().__init__(message)
+
+class ClientCannotAskForResultsWhenNotDone(Exception):
+    def __init__(self, message):
+        super().__init__(message)
