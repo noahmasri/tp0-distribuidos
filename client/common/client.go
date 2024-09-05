@@ -96,22 +96,6 @@ func (c *Client) ShutdownGracefully(notifier chan os.Signal, done chan bool) {
 	)
 }
 
-// extra goes in case you want to add more information that what is provided by default
-func (c *Client) logSendBetStatus(status ResponseStatus, action string, extra string){
-	errMsg := status.GetStatusProperties()
-	if errMsg != "" {
-		log.Infof("action: %v | result: fail | cantidad: %v | error: %v",
-			action,
-			c.betGetter.lastBatchSize,
-			errMsg,
-		)
-	}
-	log.Infof("action: %v | result: success | cantidad: %v",
-		action,
-		c.betGetter.lastBatchSize,
-	)
-}
-
 func (c *Client) SendErrorMessageAndExit(action string, err error) error {
 	// socket failed because goroutine closed it
 	if c.end {
@@ -219,64 +203,54 @@ func (c *Client) AnnounceEndBet() error {
 }
 
 // returns whether it should keep asking or if it already got what it wanted
-func (c *Client) ParseBetWinnersResponse(attempt int) ([]uint32, bool) {
+func (c *Client) ParseBetWinnersResponse() []uint32 {
 	winners := []uint32{}
 	buf := make([]byte, 1024)
-	_, err := c.conn.Read(buf)
+	r, err := c.conn.Read(buf)
 	if err != nil {
 		c.SendErrorMessageAndExit("recibir_ganadores", err)
-		return winners, false
+		return winners
 	}
 
 	i:=0
 	status := ResponseStatus(buf[i])
 	i += 1
 	if status == LOTTERY_NOT_DONE {
-		status.logLotteryWinnersStatus(attempt)
-		return winners, true
+		status.logStatus("consulta_ganadores")
+		return winners
 	} else if status != SEND_WINNERS{
-		status.logLotteryWinnersStatus(attempt)
-		return winners, false
+		status.logStatus("consulta_ganadores")
+		return winners
 	}
 
 	winner_num := int(binary.LittleEndian.Uint16(buf[i:i+2]))
 	i+=2
-	log.Infof("action: consulta_ganadores | result: success | cant_ganadores: %v",
-		winner_num,
-	)
 
 	for win := 1; win <= winner_num; win++{
+		if i + 4 > r {
+			c.SendErrorMessageAndExit("consulta_ganadores", errors.New("Server sent winners incorrectly"))
+			return []uint32{}
+		}
 		winner := binary.LittleEndian.Uint32(buf[i:i+4])
 		winners = append(winners, winner)
 		i+=4
 	}
 
-	return winners, false 
+	log.Infof("action: consulta_ganadores | result: success | cant_ganadores: %v",
+		winner_num,
+	)
+	
+	return winners 
 }
 
 func (c *Client) GetBetWinners(done chan bool) []uint32 {
-	for i := 1; i <= c.config.LoopAmount; i++ {
 
-		err := c.SendSimpleMessage(REQUEST_WINNERS) 
-		if err != nil {
-			return []uint32{}
-		}
-		
-		winners, cont := c.ParseBetWinnersResponse(i)
-		if !cont {
-			return winners
-		}
-
-		select {
-		case <-done:
-			// if it were to continue after asking for winners, i'd recomend changing return value to
-			// return errors.New("Should break: got SIGTERM")
-			return nil
-		case <-time.After(1 * time.Second):
-			// continue looping	
-		}
+	err := c.SendSimpleMessage(REQUEST_WINNERS) 
+	if err != nil {
+		return []uint32{}
 	}
-	return []uint32{}
+	
+	return c.ParseBetWinnersResponse()
 }
 
 func (c *Client) ExecuteLotteryClient(done chan bool) []uint32{

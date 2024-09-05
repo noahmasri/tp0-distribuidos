@@ -215,6 +215,8 @@ Para ejecutar tareas en la ThreadPool existen dos métodos:
 * apply_async
 Se decidió trabajar con el segundo ya que el primero espera a que la función retorne para correr otra tarea, lo cual para este problema no sirve, pues nos otorga en definitiva procesamiento secuencial.
 
+Antes de realizar todo esto, se debieron realizar algunos cambios al protocolo. En primer lugar, se eliminó el bucle del cliente en el que por cada mensaje se conectaba y se desconectaba. Para que esto funcione, también se agregó un nuevo tipo de mensaje, denominado `END_CONNECTION` para que el servidor sepa cuándo debe cortar la conexión con el cliente. Esto permite más flexibilidad ante los pedidos del cliente, permitiendo que no necesariamente cumpla con el ciclo de vida común, y pueda finalizar por ejemplo sin haber pedido los ganadores.
+
 Para poder sincronizar estos procesos se hace uso principalmente de dos herramientas.
 #### Una variable de condición 
 Esta se usa para llevar registro de las agencias que han finalizado. Al recibir un mensaje de finalización de apuestas, el servidor almacena en el set de agencias a esta. Se eligió un set y no un contador para que de igual cuántas veces la misma agencia diga que ha finalizado, se tomará solo la primera vez. Una vez recibido este mensaje, si la agencia no estaba siendo trackeada como parte de las finalizadas, entonces habiendo tomado esta condvar, se la agrega al set y revisa si llegó a 5. Si llegó a 5, entonces "despierta" (notify all) a todos los procesos que se encontraban a la espera de que las otras agencias cierren. Caso contrario, simplemente sigue con su procesamiento.

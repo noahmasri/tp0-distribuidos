@@ -7,7 +7,7 @@ const (
     ERR
     BAD_REQUEST
     ABORT
-    LOTTERY_NOT_DONE // from here on it is unhandled
+    LOTTERY_NOT_DONE
     SEND_WINNERS
     NO_MORE_BETS_ALLOWED
 )
@@ -43,20 +43,6 @@ func (s ResponseStatus) logSendBatchStatus(batchSize int){
 	log.Infof("action: apuesta_enviada | result: success | cantidad: %v",
 		batchSize,
 	)
-}
-
-func (s ResponseStatus) logLotteryWinnersStatus(attempt int){
-	errMsg := s.GetStatusProperties()
-	if s == LOTTERY_NOT_DONE{
-		log.Infof("action: recibir_ganadores | result: fail | attempt: %v | error: %v",
-            attempt,
-			errMsg,
-		)
-	} else if errMsg != "" {
-        log.Infof("action: recibir_ganadores | result: fail | error: %v",
-			errMsg,
-		)
-    }
 }
 
 // generic log status
