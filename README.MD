@@ -224,6 +224,9 @@ Cuando una agencia pide al servidor los ganadores que apostaron en su agencia, e
 #### Lock
 Este se usa para proteger el archivo de apuestas, tanto para escritura como para lectura. Esto implica que se debe tomar el lock antes de llamar a las funciones `store_bets` y `load_bets` (get_winners). Este lock a su vez protege a la variable asociada al archivo: `winners`. La idea es que, en lugar de que cada uno de los hilos cargue el archivo en memoria, procese a los ganadores y tenga su propia variable local con estos, que busque cada vez que un cliente se lo pide, que ya sea parte de lo que es el servidor, y que el primero que llegue tras el notify_all sea quien va a cargar todos los registros a memoria. Cuando el resto quiera buscar los ganadores, si ya esta variable está setteada entonces simplemente la usará para buscar las agencias ganadoras y guardarselas en una variable temporal. Es importante destacar que la variable winners no se debe usar fuera de la sección crítica, por lo que se la copia para guardar los ganadores de cada agencia y no se la use directamente, ni aunque sea para solo lectura.   
 
+### Como ejecutarlo
+Este ejercicio no requiere más que los anteriores. Se debe asegurarse de tener 5 clientes para que no se queden infinitamente esperando una notificación que no llegara, tal como en el ejercicio 7.
+ 
 # Referencias
 [1] 
 [Instalar netcat en contenedor](https://stackoverflow.com/questions/52570028/i-am-unable-to-execute-netcat-command-within-docker-bash-terminal)
